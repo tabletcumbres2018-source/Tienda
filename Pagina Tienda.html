@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Storage - Tienda</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card-img-top {
+      height: 200px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">🛒 Local Storage</a>
+      <form class="d-flex ms-auto" onsubmit="buscarProducto(event)">
+        <input id="buscador" class="form-control me-2" type="search" placeholder="Buscar productos..." onkeyup="buscarProducto(event)">
+        <button class="btn btn-outline-light" type="submit">Buscar</button>
+      </form>
+      <button class="btn btn-warning ms-3 position-relative" data-bs-toggle="modal" data-bs-target="#carritoModal">
+        🛍️ Ver Carrito
+        <span id="badgeCarrito" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+          0
+        </span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Productos (10 en total) -->
+  <div class="container my-4">
+    <div id="productos" class="row g-4">
+      
+      <!-- 1. Teléfono -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400" class="card-img-top" alt="iPhone">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">iPhone Pro Max</h5>
+            <p class="card-text fw-bold">$25,000 MXN</p>
+            <ul>
+              <li>Triple cámara</li>
+              <li>Pantalla OLED</li>
+              <li>128 GB almacenamiento</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('iPhone Pro Max', 25000, 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Teléfono -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400" class="card-img-top" alt="Realme 12 5G">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Realme 12 5G</h5>
+            <p class="card-text fw-bold">$9,500 MXN</p>
+            <ul>
+              <li>Cámara 108 MP</li>
+              <li>Conectividad 5G</li>
+              <li>Diseño moderno</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Realme 12 5G', 9500, 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Televisor -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400" class="card-img-top" alt="Samsung TV">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Samsung Smart TV 4K</h5>
+            <p class="card-text fw-bold">$12,000 MXN</p>
+            <ul>
+              <li>HDR</li>
+              <li>Ultra HD</li>
+              <li>Control remoto inteligente</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Samsung Smart TV 4K', 12000, 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Televisor -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1461151304267-38535e780c79?w=400" class="card-img-top" alt="UEYON TV">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">UEYON Smart TV 43"</h5>
+            <p class="card-text fw-bold">$8,500 MXN</p>
+            <ul>
+              <li>Disney+ y Netflix</li>
+              <li>HDMI</li>
+              <li>43 pulgadas</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('UEYON Smart TV 43', 8500, 'https://images.unsplash.com/photo-1461151304267-38535e780c79?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Televisor -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1552975084-6e027cd345c2?w=400" class="card-img-top" alt="VIDAA TV">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">VIDAA Smart TV</h5>
+            <p class="card-text fw-bold">$10,000 MXN</p>
+            <ul>
+              <li>4K Ultra HD</li>
+              <li>Netflix y YouTube</li>
+              <li>Sistema VIDAA OS</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('VIDAA Smart TV', 10000, 'https://images.unsplash.com/photo-1552975084-6e027cd345c2?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Estufa Mabe -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400" class="card-img-top" alt="Estufa Mabe">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Estufa Mabe 6 quemadores</h5>
+            <p class="card-text fw-bold">$7,800 MXN</p>
+            <ul>
+              <li>Acero inoxidable</li>
+              <li>Horno con vidrio</li>
+              <li>Diseño moderno</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Estufa Mabe', 7800, 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Estufa Whirlpool -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1588854337221-4cf9fa96059c?w=400" class="card-img-top" alt="Estufa Whirlpool">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Estufa Whirlpool 6 quemadores</h5>
+            <p class="card-text fw-bold">$9,200 MXN</p>
+            <ul>
+              <li>Vidrio templado</li>
+              <li>Horno amplio</li>
+              <li>Marca Whirlpool</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Estufa Whirlpool', 9200, 'https://images.unsplash.com/photo-1588854337221-4cf9fa96059c?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Lavadora -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400" class="card-img-top" alt="Lavadora 1">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Lavadora Automática 15kg</h5>
+            <p class="card-text fw-bold">$11,000 MXN</p>
+            <ul>
+              <li>Capacidad 15kg</li>
+              <li>Programas automáticos</li>
+              <li>Color blanco</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Lavadora Automática 15kg', 11000, 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Microondas -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400" class="card-img-top" alt="Microondas LG">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Horno Microondas LG</h5>
+            <p class="card-text fw-bold">$3,200 MXN</p>
+            <ul>
+              <li>Tecnología Smart Inverter</li>
+              <li>Descongelado rápido</li>
+              <li>Capacidad 1.5 pies</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Horno Microondas LG', 3200, 'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Refrigerador Samsung (Nombre e imagen actualizados) -->
+      <div class="col-md-3 producto">
+        <div class="card h-100">
+          <img src="https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400" class="card-img-top" alt="Refrigerador Samsung">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Refrigerador Samsung</h5>
+            <p class="card-text fw-bold">$14,500 MXN</p>
+            <ul>
+              <li>Tecnología Digital Inverter</li>
+              <li>Despachador de agua</li>
+              <li>No Frost</li>
+            </ul>
+            <button class="btn btn-primary mt-auto" onclick="agregarCarrito('Refrigerador Samsung', 14500, 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400')">Agregar</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal del Carrito -->
+  <div class="modal fade" id="carritoModal" tabindex="-1" aria-labelledby="carritoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="carritoModalLabel">🛍️ Carrito de Compras</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="contenidoCarrito">
+            <!-- Los productos se renderizan dinámicamente aquí -->
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+            <h4>Total: $<span id="totalCarrito">0</span> MXN</h4>
+            <button class="btn btn-outline-danger btn-sm" onclick="vaciarCarrito()">Vaciar Carrito</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-success" onclick="procesarPago()">Proceder al Pago</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    function obtenerCarrito() {
+      const carritoGuardado = localStorage.getItem('carrito');
+      return carritoGuardado ? JSON.parse(carritoGuardado) : [];
+    }
+
+    function guardarCarrito(carrito) {
+      localStorage.setItem('carrito', JSON.stringify(carrito));
+      actualizarBadge();
+    }
+
+    function actualizarBadge() {
+      const carrito = obtenerCarrito();
+      const totalUnidades = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+      document.getElementById('badgeCarrito').textContent = totalUnidades;
+    }
+
+    function agregarCarrito(nombre, precio, imagen) {
+      const carrito = obtenerCarrito();
+      const productoExistente = carrito.find(item => item.nombre === nombre);
+
+      if (productoExistente) {
+        productoExistente.cantidad += 1;
+      } else {
+        carrito.push({ nombre, precio, imagen, cantidad: 1 });
+      }
+
+      guardarCarrito(carrito);
+      alert(`"${nombre}" se agregó al carrito.`);
+    }
+
+    function renderizarCarrito() {
+      const carrito = obtenerCarrito();
+      const contenedor = document.getElementById('contenidoCarrito');
+      const totalElemento = document.getElementById('totalCarrito');
+
+      if (carrito.length === 0) {
+        contenedor.innerHTML = '<p class="text-center text-muted">El carrito está vacío.</p>';
+        totalElemento.textContent = '0';
+        return;
+      }
+
+      let html = '<ul class="list-group mb-3">';
+      let total = 0;
+
+      carrito.forEach((prod, index) => {
+        const subtotal = prod.precio * prod.cantidad;
+        total += subtotal;
+
+        html += `
+          <li class="list-group-item d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <img src="${prod.imagen}" alt="${prod.nombre}" style="width: 50px; height: 50px; object-fit: cover;" class="me-3 rounded">
+              <div>
+                <h6 class="my-0">${prod.nombre}</h6>
+                <small class="text-muted">$${prod.precio.toLocaleString()} MXN x ${prod.cantidad}</small>
+              </div>
+            </div>
+            <div>
+              <span class="fw-bold me-3">$${subtotal.toLocaleString()} MXN</span>
+              <button class="btn btn-sm btn-outline-danger" onclick="eliminarDelCarrito(${index})">✕</button>
+            </div>
+          </li>
+        `;
+      });
+
+      html += '</ul>';
+      contenedor.innerHTML = html;
+      totalElemento.textContent = total.toLocaleString();
+    }
+
+    function eliminarDelCarrito(index) {
+      const carrito = obtenerCarrito();
+      carrito.splice(index, 1);
+      guardarCarrito(carrito);
+      renderizarCarrito();
+    }
+
+    function vaciarCarrito() {
+      localStorage.removeItem('carrito');
+      actualizarBadge();
+      renderizarCarrito();
+    }
+
+    function procesarPago() {
+      const carrito = obtenerCarrito();
+      if (carrito.length === 0) {
+        alert("El carrito está vacío.");
+        return;
+      }
+      alert("¡Gracias por tu compra!");
+      vaciarCarrito();
+    }
+
+    function buscarProducto(event) {
+      if (event) event.preventDefault();
+      const textoBusqueda = document.getElementById('buscador').value.toLowerCase();
+      const productos = document.querySelectorAll('.producto');
+
+      productos.forEach(producto => {
+        const titulo = producto.querySelector('.card-title').textContent.toLowerCase();
+        const descripcion = producto.querySelector('.card-body').textContent.toLowerCase();
+
+        if (titulo.includes(textoBusqueda) || descripcion.includes(textoBusqueda)) {
+          producto.style.display = 'block';
+        } else {
+          producto.style.display = 'none';
+        }
+      });
+    }
+
+    // Eventos al cargar la página
+    document.addEventListener('DOMContentLoaded', actualizarBadge);
+    document.getElementById('carritoModal').addEventListener('show.bs.modal', renderizarCarrito);
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
