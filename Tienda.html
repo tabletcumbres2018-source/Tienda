@@ -10,9 +10,26 @@
       height: 200px;
       object-fit: cover;
     }
+
+    /* Heurística 4 de Nielsen: Consistencia y estándares */
+    .btn-accion {
+      min-width: 120px;
+    }
+
+    /* Mensajes de retroalimentación claros y consistentes */
+    #mensajeSistema {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 2000;
+      display: none;
+      min-width: 280px;
+    }
   </style>
 </head>
 <body>
+  <!-- Mensaje de estado: consistente y visible -->
+  <div id="mensajeSistema" class="alert alert-info shadow" role="status" aria-live="polite"></div>
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
@@ -221,12 +238,32 @@
           </div>
           <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
             <h4>Total: $<span id="totalCarrito">0</span> MXN</h4>
-            <button class="btn btn-outline-danger btn-sm" onclick="vaciarCarrito()">Vaciar Carrito</button>
+            <button class="btn btn-outline-danger btn-sm btn-accion" onclick="vaciarCarrito()">Vaciar Carrito</button>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-          <button type="button" class="btn btn-success" onclick="procesarPago()">Proceder al Pago</button>
+          <button type="button" class="btn btn-secondary btn-accion" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" id="btnPagar" class="btn btn-success btn-accion" onclick="procesarPago()">Proceder al Pago</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmación de pago: Heurística 5, prevención de errores -->
+  <div class="modal fade" id="confirmarPagoModal" tabindex="-1" aria-labelledby="confirmarPagoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmarPagoLabel">Confirmar compra</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>¿Quieres realizar la siguiente compra?</strong></p>
+          <p class="mb-0 text-muted">Revisa tu carrito antes de confirmar el pago.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-accion" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success btn-accion" id="confirmarCompraBtn">Aceptar</button>
         </div>
       </div>
     </div>
@@ -250,6 +287,19 @@
       document.getElementById('badgeCarrito').textContent = totalUnidades;
     }
 
+    // Heurística 4: mensajes y acciones con un formato consistente.
+    function mostrarMensaje(texto, tipo = 'info') {
+      const mensaje = document.getElementById('mensajeSistema');
+      mensaje.className = `alert alert-${tipo} shadow`;
+      mensaje.textContent = texto;
+      mensaje.style.display = 'block';
+
+      clearTimeout(window.temporizadorMensaje);
+      window.temporizadorMensaje = setTimeout(() => {
+        mensaje.style.display = 'none';
+      }, 3000);
+    }
+
     function agregarCarrito(nombre, precio, imagen) {
       const carrito = obtenerCarrito();
       const productoExistente = carrito.find(item => item.nombre === nombre);
@@ -261,7 +311,7 @@
       }
 
       guardarCarrito(carrito);
-      alert(`"${nombre}" se agregó al carrito.`);
+      mostrarMensaje(`"${nombre}" se agregó al carrito.`, "success");
     }
 
     function renderizarCarrito() {
@@ -317,14 +367,42 @@
       renderizarCarrito();
     }
 
+    // Heurística 5: se solicita confirmación antes de una acción importante.
     function procesarPago() {
       const carrito = obtenerCarrito();
+
       if (carrito.length === 0) {
-        alert("El carrito está vacío.");
+        mostrarMensaje("No puedes proceder al pago porque el carrito está vacío.", "warning");
         return;
       }
-      alert("¡Gracias por tu compra!");
+
+      const modalConfirmacion = new bootstrap.Modal(
+        document.getElementById('confirmarPagoModal')
+      );
+      modalConfirmacion.show();
+    }
+
+    function confirmarCompra() {
+      const carrito = obtenerCarrito();
+
+      // Prevención adicional de errores: validar nuevamente antes de finalizar.
+      if (carrito.length === 0) {
+        mostrarMensaje("La compra no pudo realizarse porque el carrito está vacío.", "warning");
+        return;
+      }
+
+      const modalConfirmacion = bootstrap.Modal.getInstance(
+        document.getElementById('confirmarPagoModal')
+      );
+      if (modalConfirmacion) modalConfirmacion.hide();
+
       vaciarCarrito();
+      mostrarMensaje("¡Gracias por tu compra! El pago se realizó correctamente.", "success");
+
+      const carritoModal = bootstrap.Modal.getInstance(
+        document.getElementById('carritoModal')
+      );
+      if (carritoModal) carritoModal.hide();
     }
 
     function buscarProducto(event) {
@@ -345,7 +423,12 @@
     }
 
     // Eventos al cargar la página
-    document.addEventListener('DOMContentLoaded', actualizarBadge);
+    document.addEventListener('DOMContentLoaded', () => {
+      actualizarBadge();
+
+      document.getElementById('confirmarCompraBtn').addEventListener('click', confirmarCompra);
+    });
+
     document.getElementById('carritoModal').addEventListener('show.bs.modal', renderizarCarrito);
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
