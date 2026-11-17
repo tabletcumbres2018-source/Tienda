@@ -2,3 +2,5 @@ node_modules/
 admin.config.json
 deploy/public_html/api/config.php
 *.log
+.dev.vars
+.wrangler/
