@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LocalStorage - Tienda en Línea con 500+ Productos</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card-img-top {
+      height: 200px;
+      object-fit: cover;
+    }
+
+    /* Heurística 4: Consistencia y estándares */
+    .btn-accion {
+      min-width: 120px;
+    }
+
+    /* Heurística 1: Visibilidad del estado del sistema - Mensajes flotantes */
+    #mensajeSistema {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 2000;
+      display: none;
+      min-width: 280px;
+    }
+
+    .producto .card { transition: transform .2s ease, box-shadow .2s ease; }
+    .producto .card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+    .selector-cantidad { max-width: 180px; }
+    .selector-cantidad .cantidad-valor { min-width: 42px; text-align: center; font-weight: bold; }
+    .estrellas { color: #f0ad4e; letter-spacing: 1px; }
+    .resumen-resena { font-size: .9rem; }
+
+    .buscador-wrap { position: relative; flex: 1 1 auto; max-width: 560px; }
+    #sugerencias { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1500; display: none; max-height: 340px; overflow-y: auto; }
+    #sugerencias .list-group-item { text-align: left; }
+    mark { padding: 0 .1em; background: #ffe69c; }
+    #sinResultados { background: #fff; border: 1px dashed #adb5bd; border-radius: .5rem; padding: 2.5rem 1rem; }
+
+    /* Heurística 6 & H1: Muestras de color interactivas e intuitivas */
+    .swatch-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #dee2e6;
+      display: inline-block;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      position: relative;
+    }
+    .swatch-color:hover {
+      transform: scale(1.15);
+    }
+    .swatch-color.selected {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.4);
+      transform: scale(1.15);
+    }
+    
+    /* Colores para swatches */
+    .swatch-negro { background-color: #212529; }
+    .swatch-azul { background-color: #0d6efd; }
+    .swatch-verde { background-color: #198754; }
+    .swatch-plata { background-color: #adb5bd; }
+    .swatch-blanco { background-color: #ffffff; border-color: #ced4da!important; }
+    .swatch-gris { background-color: #6c757d; }
+    .swatch-rojo { background-color: #dc3545; }
+    .swatch-dorado { background-color: #ffc107; }
+
+    /* Anuncios: banners y productos patrocinados */
+    .ad-banner { border-radius: .75rem; color: #fff; padding: 2rem 3.5rem; min-height: 170px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+    .ad-banner h3 { font-weight: 700; margin-bottom: .25rem; }
+    .ad-banner p { margin-bottom: 1rem; max-width: 520px; opacity: .95; }
+    .ad-azul    { background: linear-gradient(135deg, #0a3d91, #1d6fe8); }
+    .ad-morado  { background: linear-gradient(135deg, #4b1d8f, #8e44d6); }
+    .ad-verde   { background: linear-gradient(135deg, #0b5d3b, #1e9e62); }
+    .ad-naranja { background: linear-gradient(135deg, #a8420a, #e8731d); }
+    .ad-etiqueta { font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; background: rgba(0,0,0,.28); border-radius: .25rem; padding: .1rem .45rem; margin-bottom: .5rem; }
+    .ad-banner-inline { min-height: 110px; padding: 1.25rem 1.5rem; flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .ad-banner-inline h3 { font-size: 1.15rem; }
+    .ad-banner-inline p { margin-bottom: 0; }
+    .tarjeta-patrocinada .card { border: 2px solid #ffc107; }
+    .badge-patrocinado { position: absolute; top: .5rem; left: .5rem; z-index: 2; background: #ffc107; color: #212529; font-size: .7rem; font-weight: 700; padding: .25rem .5rem; border-radius: .25rem; }
+    #anunciosHero .carousel-control-prev, #anunciosHero .carousel-control-next { width: 3rem; }
+
+    .badge-envio {
+      font-size: 0.85rem;
+      padding: 0.4em 0.7em;
+    }
+
+    /* ===================== TEMA VERDE Y CAFÉ =====================
+       Para cambiar los colores basta editar estas variables. */
+    :root, [data-bs-theme="light"] {
+      --verde: #2e6b3c;          /* verde bosque (principal) */
+      --verde-medio: #3d8550;
+      --verde-musgo: #6a994e;    /* verde musgo (detalles) */
+      --verde-salvia: #a7c4a0;   /* verde salvia (suave) */
+      --verde-oscuro: #1f4d2c;
+      --cafe: #6b4a33;           /* café medio */
+      --cafe-oscuro: #3b2a1e;    /* café espresso (texto y barra) */
+      --caramelo: #a66a3a;       /* acento cálido */
+      --arena: #d9c7a6;
+      --crema: #f5efe3;          /* fondo */
+      --panel: #fffaf0;          /* tarjetas */
+      --panel-2: #fffdf7;        /* modales y menús */
+      --borde: #dccdb0;
+      --sombra: 0 4px 14px rgba(59,42,30,.14);
+
+      --bs-body-bg: #f5efe3;           --bs-body-bg-rgb: 245,239,227;
+      --bs-body-color: #3b2a1e;        --bs-body-color-rgb: 59,42,30;
+      --bs-emphasis-color: #2a1d13;
+      --bs-secondary-color: rgba(59,42,30,.72);
+      --bs-secondary-bg: #efe6d3;      --bs-secondary-bg-rgb: 239,230,211;
+      --bs-tertiary-bg: #f8f2e6;       --bs-tertiary-bg-rgb: 248,242,230;
+      --bs-border-color: var(--borde);
+      --bs-primary: #2e6b3c;           --bs-primary-rgb: 46,107,60;
+      --bs-link-color: #2e6b3c;        --bs-link-color-rgb: 46,107,60;
+      --bs-link-hover-color: #1f4d2c;  --bs-link-hover-color-rgb: 31,77,44;
+      --bs-focus-ring-color: rgba(46,107,60,.3);
+    }
+    body { background: linear-gradient(180deg, #ebe0c9 0, var(--crema) 340px) no-repeat, var(--crema); }
+
+    /* Barra superior */
+    .navbar.bg-dark { background: var(--cafe-oscuro) !important; border-bottom: 3px solid var(--verde-musgo); box-shadow: 0 3px 12px rgba(59,42,30,.3); }
+    .navbar-brand { color: #f5efe3 !important; font-weight: 800; letter-spacing: .4px; }
+
+    /* Botones */
+    .btn-primary { --bs-btn-bg: var(--verde); --bs-btn-border-color: var(--verde); --bs-btn-color: #fff;
+      --bs-btn-hover-bg: var(--verde-medio); --bs-btn-hover-border-color: var(--verde-medio); --bs-btn-hover-color: #fff;
+      --bs-btn-active-bg: #235430; --bs-btn-active-border-color: #235430; --bs-btn-active-color: #fff;
+      --bs-btn-disabled-bg: #8aa790; --bs-btn-disabled-border-color: #8aa790; --bs-btn-focus-shadow-rgb: 46,107,60; }
+    .btn-outline-primary { --bs-btn-color: var(--verde); --bs-btn-border-color: var(--verde);
+      --bs-btn-hover-bg: var(--verde); --bs-btn-hover-border-color: var(--verde); --bs-btn-hover-color: #fff;
+      --bs-btn-active-bg: var(--verde); --bs-btn-active-border-color: var(--verde); --bs-btn-active-color: #fff; }
+    .btn-warning { --bs-btn-bg: var(--arena); --bs-btn-color: var(--cafe-oscuro); --bs-btn-border-color: var(--arena);
+      --bs-btn-hover-bg: #e8d9bd; --bs-btn-hover-color: var(--cafe-oscuro); --bs-btn-hover-border-color: #e8d9bd;
+      --bs-btn-active-bg: #c9b48c; --bs-btn-active-border-color: #c9b48c; --bs-btn-active-color: var(--cafe-oscuro); font-weight: 600; }
+    .btn-outline-info { --bs-btn-color: var(--cafe); --bs-btn-border-color: var(--caramelo);
+      --bs-btn-hover-bg: var(--caramelo); --bs-btn-hover-color: #fff; --bs-btn-hover-border-color: var(--caramelo);
+      --bs-btn-active-bg: #8a5428; --bs-btn-active-border-color: #8a5428; --bs-btn-active-color: #fff; }
+    .btn-outline-secondary { --bs-btn-color: var(--cafe); --bs-btn-border-color: #a99274;
+      --bs-btn-hover-bg: var(--cafe); --bs-btn-hover-color: #fff; --bs-btn-hover-border-color: var(--cafe);
+      --bs-btn-active-bg: var(--cafe-oscuro); --bs-btn-active-border-color: var(--cafe-oscuro); --bs-btn-active-color: #fff; }
+    #badgeCarrito { background: var(--verde) !important; color: #fff; }
+
+    /* Tarjetas y productos */
+    .card { --bs-card-bg: var(--panel); --bs-card-border-color: var(--borde); }
+    .producto .card:hover { border-color: var(--verde-musgo); box-shadow: 0 8px 22px rgba(59,42,30,.2) !important; }
+    .estrellas { color: #c28a2b; }
+    .tarjeta-patrocinada .card { border: 2px solid var(--caramelo); box-shadow: 0 0 0 3px rgba(166,106,58,.16); }
+    .badge-patrocinado { background: #8a5428; color: #fff; }
+    .swatch-color { border-color: #c9b896; }
+    .swatch-color.selected { border-color: var(--verde); box-shadow: 0 0 0 2px rgba(46,107,60,.35); }
+    mark { background: rgba(106,153,78,.35); color: inherit; }
+    #sinResultados { background: var(--panel); border-color: var(--arena); }
+    .bg-light { background-color: #f1e8d6 !important; }
+
+    /* Formularios, menús y ventanas */
+    .form-control:focus, .form-select:focus { border-color: var(--verde-musgo); box-shadow: 0 0 0 .2rem rgba(46,107,60,.22); }
+    .form-check-input:checked { background-color: var(--verde); border-color: var(--verde); }
+    .modal-content { --bs-modal-bg: var(--panel-2); --bs-modal-border-color: var(--borde); box-shadow: 0 10px 40px rgba(59,42,30,.28); }
+    .modal-header.bg-dark { background: var(--cafe-oscuro) !important; }
+    .dropdown-menu { --bs-dropdown-bg: var(--panel-2); --bs-dropdown-border-color: var(--borde); --bs-dropdown-link-hover-bg: #e9efe0; --bs-dropdown-link-hover-color: var(--verde-oscuro); }
+    .list-group { --bs-list-group-bg: var(--panel-2); --bs-list-group-border-color: var(--borde); --bs-list-group-action-hover-bg: #e9efe0; --bs-list-group-action-hover-color: var(--verde-oscuro); }
+    .nav-tabs { --bs-nav-tabs-link-active-bg: var(--panel-2); --bs-nav-tabs-border-color: var(--borde);
+      --bs-nav-tabs-link-active-border-color: var(--borde) var(--borde) var(--panel-2); --bs-nav-tabs-link-active-color: var(--cafe-oscuro);
+      --bs-nav-link-color: var(--verde); --bs-nav-link-hover-color: var(--verde-oscuro); }
+    .nav-tabs .nav-link.active { border-top: 3px solid var(--verde-musgo); }
+    .alert-info { --bs-alert-bg: #e5eedd; --bs-alert-border-color: #b9d1ab; --bs-alert-color: #2d4a22; }
+
+    /* Anuncios en verde y café */
+    .ad-banner { box-shadow: var(--sombra); }
+    .ad-azul    { background: linear-gradient(135deg, #4a3226, #8a5a3b); }   /* café */
+    .ad-morado  { background: linear-gradient(135deg, #3f4718, #6b7730); }   /* oliva */
+    .ad-verde   { background: linear-gradient(135deg, #1f4d2c, #3f7a3b); }   /* verde */
+    .ad-naranja { background: linear-gradient(135deg, #6e4217, #9c6628); }   /* caramelo */
+  </style>
+</head>
+<body>
+  <!-- Heurística 1: Visibilidad del estado del sistema -->
+  <div id="mensajeSistema" class="alert alert-info shadow" role="status" aria-live="polite"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">🛒 LocalStorage</a>
+      <!-- Heurística 6: Reconocer antes que recordar (Buscador prominente) -->
+      <form id="formBusqueda" class="buscador-wrap ms-auto" role="search" autocomplete="off">
+        <div class="input-group">
+          <input id="buscador" class="form-control" type="text" placeholder="Buscar entre 500 productos, marcas o categorías..." aria-label="Buscar productos">
+          <button id="btnLimpiarBusqueda" class="btn btn-light d-none" type="button" aria-label="Borrar búsqueda">✕</button>
+          <button class="btn btn-outline-light" type="submit">Buscar</button>
+        </div>
+        <div id="sugerencias" class="list-group shadow" role="listbox"></div>
+      </form>
+      <!-- Heurística 1 & H7: Acceso rápido al carrito con contador dinámico -->
+      <button class="btn btn-warning ms-3 position-relative" data-bs-toggle="modal" data-bs-target="#carritoModal">
+        🛍️ Ver Carrito
+        <span id="badgeCarrito" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+      </button>
+      <div id="zonaUsuario" class="ms-3"></div>
+    </div>
+  </nav>
+
+  <!-- Catálogo: búsqueda, filtros y resultados -->
+  <div class="container my-4">
+    <!-- Anuncios: carrusel de banners (se llena desde /api/anuncios) -->
+    <div id="anunciosHero" class="mb-3 d-none"></div>
+
+    <!-- Heurística 7: Flexibilidad y eficiencia de uso (Filtros variados) -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label for="filtroCategoria" class="form-label">Categoría</label>
+            <select id="filtroCategoria" class="form-select"></select>
+          </div>
+          <div class="col-md-3">
+            <label for="filtroMarca" class="form-label">Marca</label>
+            <select id="filtroMarca" class="form-select"></select>
+          </div>
+          <div class="col-md-2">
+            <label for="filtroPrecio" class="form-label">Rango de precio</label>
+            <select id="filtroPrecio" class="form-select">
+              <option value="">Todos los precios</option>
+              <option value="0-3000">Hasta $3,000</option>
+              <option value="3001-8000">$3,001 - $8,000</option>
+              <option value="8001-15000">$8,001 - $15,000</option>
+              <option value="15001-999999">Más de $15,000</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="ordenProductos" class="form-label">Ordenar</label>
+            <select id="ordenProductos" class="form-select">
+              <option value="relevancia">Relevancia / original</option>
+              <option value="precio-asc">Precio: menor a mayor</option>
+              <option value="precio-desc">Precio: mayor a menor</option>
+              <option value="nombre">Nombre: A-Z</option>
+            </select>
+          </div>
+          <!-- Heurística 3: Control y libertad del usuario -->
+          <div class="col-md-2">
+            <button type="button" class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">Limpiar filtros</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback de resultados -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div id="resumenResultados" class="fw-semibold" aria-live="polite"></div>
+      <div id="chipsFiltros" class="d-flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Heurística 9: Ayuda en manejo de errores y sin resultados -->
+    <div id="sinResultados" class="text-center d-none" role="status"></div>
+
+    <!-- Grilla de Productos -->
+    <div id="productos" class="row g-4"></div>
+
+    <div class="text-center my-4">
+      <button id="btnMas" type="button" class="btn btn-outline-primary d-none"></button>
+    </div>
+  </div>
+
+  <!-- Modal del Carrito (Heurística 1, 4, 8) -->
+  <div class="modal fade" id="carritoModal" tabindex="-1" aria-labelledby="carritoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="carritoModalLabel">🛍️ Carrito de Compras</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="contenidoCarrito"></div>
+
+          <!-- Desglose transparente de costos (H1 y H8) -->
+          <div class="card bg-light border-0 p-3 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted">Subtotal productos:</span>
+              <span class="fw-semibold">$<span id="subtotalCarrito">0</span> MXN</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted">
+                Costo de envío estimado:
+                <small class="text-info d-block" id="notaEnvioCarrito">(Se calcula con tu código postal)</small>
+              </span>
+              <span class="fw-semibold" id="costoEnvioCarrito">$0 MXN</span>
+            </div>
+            <hr class="my-1">
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <h4 class="mb-0">Total a Pagar:</h4>
+              <h4 class="mb-0 text-success">$<span id="totalCarrito">0</span> MXN</h4>
+            </div>
+          </div>
+          
+          <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-outline-danger btn-sm btn-accion" onclick="vaciarCarrito()">Vaciar Carrito</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-accion" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" id="btnPagar" class="btn btn-success btn-accion" onclick="procesarPago()">Proceder al Pago</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Datos de Envío (Heurística 1, 5, 8, 10) -->
+  <div class="modal fade" id="envioModal" tabindex="-1" aria-labelledby="envioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="envioModalLabel">📦 Datos y Cálculo de Envío</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <form id="formEnvio">
+          <div class="modal-body">
+            <!-- Heurística 10: Ayuda y documentación clara sobre costos de envío -->
+            <div class="alert alert-info py-2 small mb-3">
+              ℹ️ <strong>Política de Envíos:</strong> Gratuito ($0 MXN) hasta 500 km. Para envíos mayores a 500 km aplica una tarifa fija de $50 MXN. La distancia se calcula automáticamente con tu código postal.
+            </div>
+
+            <div class="mb-3">
+              <label for="direccionEnvio" class="form-label">Dirección completa de entrega *</label>
+              <input id="direccionEnvio" class="form-control" placeholder="Calle, número, colonia, ciudad y código postal" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="descripcionLugar" class="form-label">Descripción / Referencias del domicilio *</label>
+              <textarea id="descripcionLugar" class="form-control" rows="2" maxlength="500" placeholder="Ej: Casa color blanco, entre calle 2 y 3." required></textarea>
+            </div>
+
+            <!-- Envío calculado por código postal -->
+            <div class="mb-3 card p-3 bg-light border">
+              <label for="codigoPostal" class="form-label fw-bold">Código postal *</label>
+              <input id="codigoPostal" class="form-control" inputmode="numeric" maxlength="5" pattern="\d{5}" placeholder="Ej: 64000" autocomplete="postal-code" required>
+              <div id="badgeStatusEnvio" class="mt-3 p-2 rounded text-center fw-bold bg-secondary text-white">
+                Escribe tu código postal para calcular el envío
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-accion" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary btn-accion">Continuar al Pago</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación de Pago -->
+  <div class="modal fade" id="confirmarPagoModal" tabindex="-1" aria-labelledby="confirmarPagoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmarPagoLabel">Resumen y Confirmación de Compra</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>¿Deseas confirmar la siguiente orden?</strong></p>
+          <div id="resumenCheckout" class="card p-3 bg-light mb-3"></div>
+
+          <!-- Pasarela de pago en modo SANDBOX -->
+          <div class="alert alert-warning py-2 small mb-3">
+            <strong>🧪 Modo sandbox:</strong> no se cobra dinero real. Usa una tarjeta de prueba:
+            <ul class="mb-0 mt-1">
+              <li><code>4242 4242 4242 4242</code> → aprobada (Visa)</li>
+              <li><code>5555 5555 5555 4444</code> → aprobada (Mastercard)</li>
+              <li><code>4000 0000 0000 0002</code> → rechazada</li>
+              <li><code>4000 0000 0000 9995</code> → fondos insuficientes</li>
+            </ul>
+            <span class="d-block mt-1">Cualquier fecha futura (ej. 12/30) y CVV de 3 dígitos.</span>
+          </div>
+          <form id="formPago" autocomplete="off" novalidate>
+            <div class="mb-2">
+              <label for="pagoNumero" class="form-label small mb-1">Número de tarjeta</label>
+              <input id="pagoNumero" class="form-control" inputmode="numeric" maxlength="23" placeholder="4242 4242 4242 4242">
+            </div>
+            <div class="mb-2">
+              <label for="pagoNombre" class="form-label small mb-1">Nombre en la tarjeta</label>
+              <input id="pagoNombre" class="form-control" placeholder="Como aparece en la tarjeta">
+            </div>
+            <div class="row g-2">
+              <div class="col-6"><label for="pagoExp" class="form-label small mb-1">Vencimiento (MM/AA)</label><input id="pagoExp" class="form-control" maxlength="5" placeholder="12/30"></div>
+              <div class="col-6"><label for="pagoCvv" class="form-label small mb-1">CVV</label><input id="pagoCvv" class="form-control" type="password" inputmode="numeric" maxlength="4" placeholder="123"></div>
+            </div>
+          </form>
+          <div id="errorPago" class="alert alert-danger py-2 small mt-3 mb-0 d-none" role="alert"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-accion" data-bs-dismiss="modal">Modificar</button>
+          <button type="button" class="btn btn-success btn-accion" id="confirmarCompraBtn">Confirmar y Pagar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Especificaciones del Producto -->
+  <div class="modal fade" id="especificacionesModal" tabindex="-1" aria-labelledby="especificacionesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title" id="especificacionesModalLabel">📋 Especificaciones del Producto</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" id="contenidoEspecificaciones"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Volver al catálogo</button>
+          <button type="button" id="btnAgregarDesdeSpecs" class="btn btn-primary">Agregar al Carrito</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Cuenta de Usuario -->
+  <div class="modal fade" id="cuentaModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Cuenta de Usuario</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <ul class="nav nav-tabs mb-3" id="cuentaTabs">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#panelLogin">Iniciar sesión</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#panelRegistro">Crear cuenta</button></li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="panelLogin">
+              <form id="formLogin">
+                <div class="mb-3"><label class="form-label">Correo</label><input id="loginCorreo" type="email" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">Contraseña</label><input id="loginPassword" type="password" class="form-control" required></div>
+                <div class="form-check mb-3"><input id="mantenerSesion" class="form-check-input" type="checkbox"><label class="form-check-label" for="mantenerSesion">Mantener sesión iniciada</label></div>
+                <button class="btn btn-primary w-100" type="submit">Iniciar sesión</button>
+              </form>
+            </div>
+            <div class="tab-pane fade" id="panelRegistro">
+              <form id="formRegistro">
+                <div class="mb-3"><label class="form-label">Nombre</label><input id="registroNombre" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">Correo</label><input id="registroCorreo" type="email" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">Contraseña</label><input id="registroPassword" type="password" minlength="4" class="form-control" required></div>
+                <button class="btn btn-success w-100" type="submit">Crear cuenta</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Reseñas -->
+  <div class="modal fade" id="resenasModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header"><h5 id="tituloResenas" class="modal-title">Reseñas</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div id="listaResenas" class="mb-4"></div>
+          <div class="border-top pt-3">
+            <h6>Escribe una reseña</h6>
+            <div id="avisoLoginResena" class="alert alert-info">Inicia sesión para poder publicar una reseña.</div>
+            <form id="formResena">
+              <div class="mb-3"><label class="form-label">Calificación</label>
+                <select id="calificacionResena" class="form-select" required>
+                  <option value="5">★★★★★ - Excelente</option><option value="4">★★★★ - Muy bueno</option><option value="3">★★★ - Bueno</option><option value="2">★★ - Regular</option><option value="1">★ - Malo</option>
+                </select>
+              </div>
+              <div class="mb-3"><label class="form-label">Comentario</label><textarea id="comentarioResena" class="form-control" rows="3" maxlength="500" required></textarea></div>
+              <div id="errorResena" class="alert alert-danger py-2 small d-none" role="alert"></div>
+              <button id="btnEnviarResena" class="btn btn-primary" type="submit">Publicar reseña</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Recibo del pedido (folio) -->
+  <div class="modal fade" id="reciboModal" tabindex="-1" aria-labelledby="reciboLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="reciboLabel">Pedido registrado</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" id="reciboContenido"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal" onclick="setTimeout(abrirMisPedidos, 350)">Ver mis pedidos</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Seguir comprando</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Mis pedidos -->
+  <div class="modal fade" id="pedidosModal" tabindex="-1" aria-labelledby="pedidosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pedidosLabel">📦 Mis pedidos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" id="listaPedidos"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generación Dinámica de 500 Productos y Lógica Javascript -->
+  <script>
+    const IMAGENES = [
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400",
+      "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400",
+      "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400",
+      "https://images.unsplash.com/photo-1461151304267-38535e780c79?w=400",
+      "https://images.unsplash.com/photo-1552975084-6e027cd345c2?w=400",
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400",
+      "https://images.unsplash.com/photo-1588854337221-4cf9fa96059c?w=400",
+      "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400",
+      "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400",
+      "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400"
+    ];
+
+    const CATEGORIAS_CONFIG = [
+      { c: "Teléfonos", m: ["Apple", "Samsung", "Xiaomi", "Motorola", "Realme", "Honor"], pMin: 2500, pMax: 35000, feat: ["Cámara de alta resolución", "Pantalla AMOLED", "Conectividad 5G", "Carga rápida", "Resistencia al agua"] },
+      { c: "Televisores", m: ["Samsung", "LG", "Sony", "Hisense", "TCL", "Philips"], pMin: 4000, pMax: 45000, feat: ["4K Ultra HD", "Sistema Smart TV", "HDR10+", "Dolby Atmos", "HDMI 2.1"] },
+      { c: "Electrodomésticos", m: ["Mabe", "Whirlpool", "LG", "Samsung", "Oster", "Hisense"], pMin: 1500, pMax: 28000, feat: ["Eficiencia Energética A+", "Tecnología Inverter", "Control Digital", "Diseño Ergonómico"] },
+      { c: "Cómputo", m: ["Apple", "Dell", "HP", "Lenovo", "Asus", "Acer"], pMin: 6000, pMax: 48000, feat: ["Procesador de última generación", "Memoria RAM expandible", "SSD Ultrarrápido", "Pantalla Full HD"] },
+      { c: "Audio", m: ["Sony", "Bose", "JBL", "Sennheiser", "Logitech", "Apple"], pMin: 500, pMax: 12000, feat: ["Cancelación de ruido activa", "Conexión Bluetooth 5.3", "Batería de larga duración", "Resistencia a salpicaduras"] },
+      { c: "Hogar y Cocina", m: ["Ninja", "Oster", "Philips", "Black+Decker", "Hamilton Beach"], pMin: 400, pMax: 8500, feat: ["Materiales libres de BPA", "Fácil de limpiar", "Apagado automático", "Múltiples niveles de potencia"] }
+    ];
+
+    const COLORES_PALETA = ["Negro", "Plata", "Azul", "Verde", "Blanco", "Gris", "Rojo"];
+
+    // Función generadora para crear exactamente 500 productos estructurados
+    function generar500Productos() {
+      const productos = [];
+      let contador = 0;
+
+      for (let i = 1; i <= 500; i++) {
+        const catConfig = CATEGORIAS_CONFIG[i % CATEGORIAS_CONFIG.length];
+        const marca = catConfig.m[i % catConfig.m.length];
+        const precio = Math.floor((catConfig.pMin + ((i * 137) % (catConfig.pMax - catConfig.pMin))) / 100) * 100 + 99;
+        
+        // Colores asignados alternadamente
+        const numColores = 2 + (i % 3); // entre 2 y 4 colores por producto
+        const coloresSub = [];
+        for (let j = 0; j < numColores; j++) {
+          const colorNom = COLORES_PALETA[(i + j) % COLORES_PALETA.length];
+          if (!coloresSub.includes(colorNom)) coloresSub.push(colorNom);
+        }
+
+        const titulo = `${catConfig.c.slice(0, -1)} ${marca} Series ${100 + i}`;
+        
+        productos.push({
+          id: i - 1,
+          n: titulo,
+          t: titulo,
+          c: catConfig.c,
+          m: marca,
+          p: precio,
+          f: [
+            catConfig.feat[i % catConfig.feat.length],
+            catConfig.feat[(i + 1) % catConfig.feat.length],
+            catConfig.feat[(i + 2) % catConfig.feat.length]
+          ],
+          colores: coloresSub,
+          i: i % IMAGENES.length,
+          k: `${catConfig.c.toLowerCase()} ${marca.toLowerCase()} gadget equipo producto`
+        });
+      }
+
+      return productos;
+    }
+
+    // Los productos ahora vienen de SQL Server (MegaStoreDB) vía /api/productos.
+    // generar500Productos() queda solo como respaldo si el servidor no responde.
+    let DATOS_PRODUCTOS = [];
+    let productoResenaActual = null;
+    let coloresSeleccionados = {};
+
+    const claveCarrito = () => {
+      const usuario = obtenerUsuarioActual();
+      return usuario ? `carrito_${usuario.correo}` : 'carrito_invitado';
+    };
+
+    function obtenerUsuarios() { return JSON.parse(localStorage.getItem('usuariosTienda') || '[]'); }
+    function guardarUsuarios(usuarios) { localStorage.setItem('usuariosTienda', JSON.stringify(usuarios)); }
+    function obtenerUsuarioActual() {
+      const guardado = localStorage.getItem('sesionTienda') || sessionStorage.getItem('sesionTienda');
+      return guardado ? JSON.parse(guardado) : null;
+    }
+    function guardarSesion(usuario, persistente) {
+      const destino = persistente ? localStorage : sessionStorage;
+      localStorage.removeItem('sesionTienda'); sessionStorage.removeItem('sesionTienda');
+      destino.setItem('sesionTienda', JSON.stringify({ nombre: usuario.nombre, correo: usuario.correo }));
+    }
+    function cerrarSesion() {
+      localStorage.removeItem('sesionTienda'); sessionStorage.removeItem('sesionTienda');
+      actualizarZonaUsuario(); actualizarBadge(); mostrarMensaje('Sesión cerrada correctamente.', 'info');
+    }
+    function actualizarZonaUsuario() {
+      const zona = document.getElementById('zonaUsuario');
+      const usuario = obtenerUsuarioActual();
+      zona.innerHTML = usuario
+        ? `<div class="dropdown"><button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">👤 ${escapeHTML(usuario.nombre)}</button><ul class="dropdown-menu dropdown-menu-end"><li><span class="dropdown-item-text small">${escapeHTML(usuario.correo)}</span></li><li><button class="dropdown-item" onclick="abrirMisPedidos()">📦 Mis pedidos</button></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" onclick="cerrarSesion()">Cerrar sesión</button></li></ul></div>`
+        : `<button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#cuentaModal">👤 Iniciar sesión</button>`;
+    }
+    function escapeHTML(valor) {
+      return String(valor).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    }
+
+    function obtenerCarrito() { return JSON.parse(localStorage.getItem(claveCarrito()) || '[]'); }
+    function guardarCarrito(carrito) { localStorage.setItem(claveCarrito(), JSON.stringify(carrito)); actualizarBadge(); }
+    function actualizarBadge() {
+      const total = obtenerCarrito().reduce((sum, item) => sum + item.cantidad, 0);
+      document.getElementById('badgeCarrito').textContent = total;
+    }
+
+    function mostrarMensaje(texto, tipo = 'info') {
+      const mensaje = document.getElementById('mensajeSistema');
+      mensaje.className = `alert alert-${tipo} shadow`; mensaje.textContent = texto; mensaje.style.display = 'block';
+      clearTimeout(window.temporizadorMensaje);
+      window.temporizadorMensaje = setTimeout(() => mensaje.style.display = 'none', 3000);
+    }
+
+    function cambiarCantidadProducto(id, cambio) {
+      cantidades[id] = Math.max(1, (cantidades[id] || 1) + cambio);
+      $(`cantidad-${id}`).textContent = cantidades[id];
+    }
+
+    function seleccionarColor(idProducto, color, elementoBtn) {
+      coloresSeleccionados[idProducto] = color;
+      const contenedor = elementoBtn.closest('.swatches-container');
+      if (contenedor) {
+        contenedor.querySelectorAll('.swatch-color').forEach(el => el.classList.remove('selected'));
+        elementoBtn.classList.add('selected');
+      }
+      const textoLabel = document.getElementById(`color-label-${idProducto}`);
+      if (textoLabel) textoLabel.textContent = color;
+    }
+
+    function agregarCantidadSeleccionada(id) {
+      const p = PRODUCTOS[id], cantidad = cantidades[id] || 1, carrito = obtenerCarrito();
+      const colorElegido = coloresSeleccionados[id] || (p.colores && p.colores[0]) || 'Predeterminado';
+      
+      const existente = carrito.find(item => item.idProd === p.id && item.color === colorElegido);
+      if (existente) {
+        existente.cantidad += cantidad;
+      } else {
+        carrito.push({ 
+          idProd: p.id,
+          idDb: p.idDb ?? (p.id + 1), // Id real en la tabla Productos de SQL Server
+          nombre: p.titulo,
+          precio: p.p, 
+          imagen: p.img, 
+          cantidad, 
+          color: colorElegido,
+          categoria: p.c,
+          marca: p.m 
+        });
+      }
+      guardarCarrito(carrito);
+      mostrarMensaje(`Se agregaron ${cantidad} unidad(es) de "${p.titulo}" (Color: ${colorElegido}) al carrito.`, 'success');
+    }
+
+    // Cuando la página no se abre desde el propio servidor (puerto 3000), apunta a él.
+    // En local (Node, puerto 3000) y en el dominio real (PHP) la API está en el mismo origen: /api/...
+    // Solo si abres el archivo directo (file://) o con otro servidor local, apunta al Node de localhost:3000.
+    const API_BASE = (location.protocol === 'file:' || (location.hostname === 'localhost' && location.port !== '3000')) ? 'http://localhost:3000' : '';
+    // Envío calculado por el servidor a partir del código postal: { cp, estado, distanciaKm, costo }
+    let envioActual = null;
+    let datosEnvio = null; // { direccion, descripcion, cp } del checkout en curso
+
+    function renderizarCarrito() {
+      const carrito = obtenerCarrito();
+      const contenedor = document.getElementById('contenidoCarrito');
+      const subtotalElemento = document.getElementById('subtotalCarrito');
+      const costoEnvioElemento = document.getElementById('costoEnvioCarrito');
+      const totalElemento = document.getElementById('totalCarrito');
+      
+      if (!carrito.length) { 
+        contenedor.innerHTML = '<p class="text-center text-muted py-4">El carrito está vacío.</p>'; 
+        subtotalElemento.textContent = '0';
+        costoEnvioElemento.textContent = '$0 MXN';
+        totalElemento.textContent = '0'; 
+        return; 
+      }
+      
+      let html = '<ul class="list-group mb-3">', subtotal = 0;
+      carrito.forEach((prod, index) => {
+        const itemSubtotal = prod.precio * prod.cantidad; 
+        subtotal += itemSubtotal;
+        html += `<li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div class="d-flex align-items-center">
+            <img src="${prod.imagen}" alt="${escapeHTML(prod.nombre)}" style="width:55px;height:55px;object-fit:cover" class="me-3 rounded border">
+            <div>
+              <h6 class="my-0">${escapeHTML(prod.nombre)}</h6>
+              <div class="small text-muted">Color: <span class="badge bg-secondary">${escapeHTML(prod.color || 'Único')}</span></div>
+              <small class="text-muted">$${prod.precio.toLocaleString()} MXN c/u</small>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-danger" onclick="cambiarCantidadCarrito(${index},-1)" aria-label="Restar una unidad">−</button>
+            <strong>${prod.cantidad}</strong>
+            <button class="btn btn-sm btn-outline-success" onclick="cambiarCantidadCarrito(${index},1)" aria-label="Sumar una unidad">+</button>
+            <span class="fw-bold ms-2">$${itemSubtotal.toLocaleString()}</span>
+            <button class="btn btn-sm btn-outline-danger ms-2" onclick="eliminarDelCarrito(${index})" title="Eliminar del carrito">✕</button>
+          </div>
+        </li>`;
+      });
+
+      const costoEnvio = envioActual ? envioActual.costo : 0;
+      const total = subtotal + costoEnvio;
+
+      contenedor.innerHTML = html + '</ul>';
+      subtotalElemento.textContent = subtotal.toLocaleString();
+
+      if (!envioActual) {
+        costoEnvioElemento.innerHTML = `<span class="text-muted">Se calcula al pagar</span>`;
+      } else if (costoEnvio > 0) {
+        costoEnvioElemento.innerHTML = `<span class="text-danger">+$${costoEnvio} MXN</span> <small class="text-muted">(CP ${escapeHTML(envioActual.cp)})</small>`;
+      } else {
+        costoEnvioElemento.innerHTML = `<span class="text-success">¡GRATIS!</span> <small class="text-muted">(CP ${escapeHTML(envioActual.cp)})</small>`;
+      }
+      
+      totalElemento.textContent = total.toLocaleString();
+    }
+
+    function cambiarCantidadCarrito(index, cambio) {
+      const carrito = obtenerCarrito(); carrito[index].cantidad += cambio;
+      if (carrito[index].cantidad <= 0) carrito.splice(index, 1);
+      guardarCarrito(carrito); renderizarCarrito();
+    }
+    function eliminarDelCarrito(index) { const c = obtenerCarrito(); c.splice(index, 1); guardarCarrito(c); renderizarCarrito(); }
+    function vaciarCarrito() { localStorage.removeItem(claveCarrito()); actualizarBadge(); renderizarCarrito(); }
+
+    function claveEnvio() {
+      const usuario = obtenerUsuarioActual();
+      return usuario ? `envio_${usuario.correo}` : null;
+    }
+
+    function cargarDatosEnvio() {
+      const clave = claveEnvio();
+      if (!clave) return;
+      const datos = JSON.parse(localStorage.getItem(clave) || '{}');
+      if (datos.direccion) document.getElementById('direccionEnvio').value = datos.direccion;
+      if (datos.descripcion) document.getElementById('descripcionLugar').value = datos.descripcion;
+      if (datos.cp) {
+        document.getElementById('codigoPostal').value = datos.cp;
+        consultarEnvio(datos.cp);
+      }
+    }
+
+    // Pide al servidor el costo de envío para un código postal y actualiza la interfaz
+    let consultaEnvioId = 0;
+    async function consultarEnvio(cp) {
+      const badge = document.getElementById('badgeStatusEnvio');
+      const estilo = (clase, html) => { badge.className = `mt-3 p-2 rounded text-center fw-bold ${clase}`; badge.innerHTML = html; };
+      cp = String(cp || '').trim();
+      envioActual = null;
+
+      if (!/^\d{5}$/.test(cp)) {
+        estilo('bg-secondary text-white', 'Escribe tu código postal (5 dígitos) para calcular el envío');
+        return renderizarCarrito();
+      }
+      const id = ++consultaEnvioId;
+      estilo('bg-secondary text-white', 'Calculando envío…');
+      try {
+        const resp = await fetch(`${API_BASE}/api/envio?cp=${cp}`);
+        const datos = await resp.json();
+        if (id !== consultaEnvioId) return; // llegó una consulta más nueva
+        if (!resp.ok) {
+          estilo('bg-danger text-white', `❌ ${escapeHTML(datos.error || 'Código postal no válido')}`);
+        } else {
+          envioActual = datos;
+          const lugar = `${escapeHTML(datos.estado)} · ≈ ${datos.distanciaKm} km`;
+          estilo(datos.costo > 0 ? 'bg-warning text-dark' : 'bg-success text-white',
+            datos.costo > 0
+              ? `⚠️ Envío a ${lugar}: <strong>$${datos.costo} MXN</strong> (supera 500 km)`
+              : `🚚 Envío a ${lugar}: <strong>GRATIS</strong> (≤ 500 km)`);
+        }
+      } catch (err) {
+        if (id !== consultaEnvioId) return;
+        estilo('bg-danger text-white', '❌ No se pudo calcular el envío. ¿Está encendido el servidor (node server.js)?');
+      }
+      renderizarCarrito();
+    }
+
+    function procesarPago() {
+      const usuario = obtenerUsuarioActual();
+      if (!usuario) {
+        mostrarMensaje('Debes iniciar sesión o crear una cuenta para realizar una compra.', 'warning');
+        const carritoModal = bootstrap.Modal.getInstance(document.getElementById('carritoModal'));
+        if (carritoModal) carritoModal.hide();
+        setTimeout(() => new bootstrap.Modal(document.getElementById('cuentaModal')).show(), 300);
+        return;
+      }
+
+      if (!obtenerCarrito().length) {
+        return mostrarMensaje('No puedes proceder al pago porque el carrito está vacío.', 'warning');
+      }
+
+      cargarDatosEnvio();
+      bootstrap.Modal.getInstance(document.getElementById('carritoModal'))?.hide();
+      setTimeout(() => new bootstrap.Modal(document.getElementById('envioModal')).show(), 350);
+    }
+
+    function verEspecificaciones(idProd) {
+      const p = PRODUCTOS[idProd];
+      if (!p) return;
+
+      const colorActual = coloresSeleccionados[idProd] || (p.colores && p.colores[0]) || 'Negro';
+
+      const contenido = `
+        <div class="row g-4">
+          <div class="col-md-5 text-center">
+            <img src="${p.img}" class="img-fluid rounded border shadow-sm mb-3" alt="${escapeHTML(p.titulo)}">
+            <div class="bg-light p-2 rounded border">
+              <span class="text-muted d-block small">Precio de lista</span>
+              <h3 class="text-primary fw-bold my-0">$${p.p.toLocaleString()} MXN</h3>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <h4>${escapeHTML(p.titulo)}</h4>
+            <p class="text-muted mb-2">Categoría: <strong>${escapeHTML(p.c)}</strong> | Marca: <strong>${escapeHTML(p.m)}</strong></p>
+            <hr class="my-2">
+            <h6 class="fw-bold mt-3">🎨 Colores Disponibles:</h6>
+            <p class="small text-muted mb-1">Color seleccionado: <span class="fw-bold text-dark">${colorActual}</span></p>
+
+            <h6 class="fw-bold mt-3">✨ Ficha Técnica & Destacados:</h6>
+            <ul class="list-group list-group-flush mb-3">
+              ${p.f.map(item => `<li class="list-group-item bg-transparent px-0 py-1">✓ ${escapeHTML(item)}</li>`).join('')}
+            </ul>
+
+            <h6 class="fw-bold">📝 Descripción del Producto:</h6>
+            <p class="small text-secondary">
+              Garantía total de 12 meses. Producto verificado y certificado dentro de la categoría de ${escapeHTML(p.c)} de la marca ${escapeHTML(p.m)}.
+            </p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('contenidoEspecificaciones').innerHTML = contenido;
+      const btnAgregar = document.getElementById('btnAgregarDesdeSpecs');
+      btnAgregar.onclick = () => {
+        agregarCantidadSeleccionada(idProd);
+        bootstrap.Modal.getInstance(document.getElementById('especificacionesModal'))?.hide();
+      };
+
+      new bootstrap.Modal(document.getElementById('especificacionesModal')).show();
+    }
+
+    async function confirmarCompra() {
+      const usuario = obtenerUsuarioActual();
+      if (!usuario) {
+        bootstrap.Modal.getInstance(document.getElementById('confirmarPagoModal'))?.hide();
+        mostrarMensaje('Debes iniciar sesión para finalizar la compra.', 'warning');
+        new bootstrap.Modal(document.getElementById('cuentaModal')).show();
+        return;
+      }
+
+      const carrito = obtenerCarrito();
+      if (!carrito.length) return mostrarMensaje('La compra no pudo realizarse porque el carrito está vacío.', 'warning');
+      if (!datosEnvio || !envioActual) return mostrarMensaje('Faltan los datos de envío.', 'warning');
+
+      const btn = $('confirmarCompraBtn'), error = $('errorPago');
+      const mostrarError = t => { error.textContent = t; error.classList.remove('d-none'); };
+      error.classList.add('d-none');
+      btn.disabled = true; btn.textContent = 'Procesando pago…';
+
+      try {
+        // El servidor recalcula precios y envío; aquí solo se mandan ids, cantidades y datos de entrega/pago.
+        const resp = await fetch(`${API_BASE}/api/pedidos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            usuario: { nombre: usuario.nombre, correo: usuario.correo },
+            direccion: datosEnvio.direccion,
+            referencias: datosEnvio.descripcion,
+            cp: datosEnvio.cp,
+            items: carrito.map(i => ({ idDb: i.idDb ?? (i.idProd + 1), cantidad: i.cantidad, color: i.color })),
+            tarjeta: { numero: $('pagoNumero').value, nombre: $('pagoNombre').value, exp: $('pagoExp').value, cvv: $('pagoCvv').value }
+          })
+        });
+        const datos = await resp.json().catch(() => ({}));
+        if (!resp.ok) return mostrarError(datos.error || 'No se pudo procesar el pedido.');
+
+        $('formPago').reset();
+        bootstrap.Modal.getInstance($('confirmarPagoModal'))?.hide();
+        bootstrap.Modal.getInstance($('carritoModal'))?.hide();
+        vaciarCarrito();
+        setTimeout(() => mostrarRecibo(datos), 400);
+      } catch (err) {
+        mostrarError('No se pudo contactar al servidor. Verifica que esté encendido (node server.js).');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Confirmar y Pagar';
+      }
+    }
+
+    const COLOR_ESTADO = { Pendiente: 'secondary', Pagado: 'success', Enviado: 'primary', Entregado: 'secondary', Cancelado: 'danger' };
+    const dinero = n => `$${Number(n).toLocaleString('es-MX')} MXN`;
+
+    function mostrarRecibo(d) {
+      $('reciboContenido').innerHTML = `
+        <div class="text-center mb-3">
+          <div class="fs-1" aria-hidden="true">✅</div>
+          <h4 class="mb-1">¡Gracias por tu compra!</h4>
+          <p class="text-muted mb-2">Guarda tu folio para dar seguimiento a tu pedido.</p>
+          <div class="display-6 fw-bold text-primary">${escapeHTML(d.folio)}</div>
+          <span class="badge bg-${COLOR_ESTADO[d.estado] || 'secondary'} mt-2">${escapeHTML(d.estado)}</span>
+        </div>
+        <ul class="list-group">
+          <li class="list-group-item d-flex justify-content-between"><span>Subtotal</span><span>${dinero(d.subtotal)}</span></li>
+          <li class="list-group-item d-flex justify-content-between"><span>Envío a ${escapeHTML(d.estadoEnvio)}</span><span>${d.costoEnvio ? dinero(d.costoEnvio) : 'Gratis'}</span></li>
+          <li class="list-group-item d-flex justify-content-between fw-bold"><span>Total pagado</span><span class="text-success">${dinero(d.total)}</span></li>
+          <li class="list-group-item small text-muted">Referencia de pago (sandbox): ${escapeHTML(d.pagoReferencia)}</li>
+        </ul>`;
+      new bootstrap.Modal($('reciboModal')).show();
+    }
+
+    async function abrirMisPedidos() {
+      const usuario = obtenerUsuarioActual();
+      if (!usuario) return mostrarMensaje('Inicia sesión para ver tus pedidos.', 'warning');
+      const lista = $('listaPedidos');
+      lista.innerHTML = '<p class="text-muted text-center py-3">Cargando…</p>';
+      new bootstrap.Modal($('pedidosModal')).show();
+      try {
+        const resp = await fetch(`${API_BASE}/api/pedidos?correo=${encodeURIComponent(usuario.correo)}`);
+        const pedidos = await resp.json();
+        if (!resp.ok) throw new Error(pedidos.error);
+        lista.innerHTML = pedidos.length ? pedidos.map(p => `
+          <div class="card mb-3">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div><strong>${escapeHTML(p.Folio)}</strong> <span class="text-muted small">· ${new Date(p.Fecha).toLocaleString('es-MX')}</span></div>
+              <span class="badge bg-${COLOR_ESTADO[p.Estado] || 'secondary'}">${escapeHTML(p.Estado)}</span>
+            </div>
+            <ul class="list-group list-group-flush small">
+              ${p.items.map(i => `<li class="list-group-item d-flex justify-content-between"><span>${i.Cantidad} × ${escapeHTML(i.Producto)} <span class="badge bg-secondary">${escapeHTML(i.Color)}</span></span><span>${dinero(i.PrecioUnitario * i.Cantidad)}</span></li>`).join('')}
+              <li class="list-group-item d-flex justify-content-between"><span>Envío a ${escapeHTML(p.EstadoEnvio)} (C.P. ${escapeHTML(p.CodigoPostal)})</span><span>${p.CostoEnvio ? dinero(p.CostoEnvio) : 'Gratis'}</span></li>
+              <li class="list-group-item d-flex justify-content-between fw-bold"><span>Total</span><span>${dinero(p.Total)}</span></li>
+            </ul>
+          </div>`).join('') : '<p class="text-muted text-center py-3">Aún no has realizado pedidos.</p>';
+      } catch (err) {
+        lista.innerHTML = '<div class="alert alert-danger">No se pudieron cargar tus pedidos. Verifica que el servidor esté encendido.</div>';
+      }
+    }
+
+    const POR_PAGINA = 24;
+    const BUSQUEDAS_POPULARES = ['Samsung', 'Apple', '4K Ultra HD', 'Televisores', 'Cómputo', 'Inverter'];
+    const ACENTOS = { a: 'aáàâä', e: 'eéèêë', i: 'iíìîï', o: 'oóòôö', u: 'uúùûü', n: 'nñ' };
+
+    const cantidades = {};
+    let resultados = [], pagina = 1, sugerenciaActiva = -1;
+    const $ = id => document.getElementById(id);
+    const norm = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const variantes = t => { const r = t.replace(/(es|s)$/, ''); return r.length >= 3 && r !== t ? [t, r] : [t]; };
+    
+    let PRODUCTOS = [];
+
+    async function cargarProductos() {
+      try {
+        const resp = await fetch(API_BASE + '/api/productos');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        DATOS_PRODUCTOS = await resp.json();
+      } catch (err) {
+        console.warn('No se pudo leer SQL Server, usando datos de respaldo:', err);
+        DATOS_PRODUCTOS = generar500Productos().map(p => ({ ...p, img: IMAGENES[p.i % IMAGENES.length] }));
+        mostrarMensaje('Sin conexión a la base de datos. Mostrando catálogo de respaldo.', 'warning');
+      }
+      PRODUCTOS = DATOS_PRODUCTOS.map((p) => ({
+        ...p,
+        titulo: p.t || p.n,
+        _n: norm(p.t || p.n),
+        _m: norm(p.m),
+        _txt: norm([p.n, p.t || '', p.c, p.m, p.k, ...p.f].join(' '))
+      }));
+    }
+
+    // ---- Anuncios (banners + productos patrocinados) desde SQL Server ----
+    let ANUNCIOS = { banners: [], productos: new Set() };
+
+    async function cargarAnuncios() {
+      try {
+        const resp = await fetch(`${API_BASE}/api/anuncios`);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const d = await resp.json();
+        ANUNCIOS = { banners: d.banners || [], productos: new Set(d.productos || []) };
+      } catch (err) {
+        console.warn('Anuncios no disponibles:', err); // los anuncios son opcionales: el catálogo funciona sin ellos
+      }
+    }
+
+    function irACategoria(cat) {
+      $('buscador').value = '';
+      $('filtroCategoria').value = cat; llenarMarcas(); $('filtroMarca').value = '';
+      aplicarFiltros();
+      $('resumenResultados').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const TEMAS_ANUNCIO = ['azul', 'morado', 'verde', 'naranja'];
+    function bannerContenido(b) {
+      const tema = TEMAS_ANUNCIO.includes(b.tema) ? b.tema : 'azul';
+      const boton = b.boton && b.categoria ? `<button type="button" class="btn btn-light btn-sm fw-semibold" data-ad-cat="${escapeHTML(b.categoria)}">${escapeHTML(b.boton)} →</button>` : '';
+      return { tema, boton };
+    }
+
+    function renderizarHero() {
+      const cont = $('anunciosHero'), bs = ANUNCIOS.banners;
+      if (!bs.length) return cont.classList.add('d-none');
+      cont.classList.remove('d-none');
+      cont.innerHTML = `
+        <div id="carruselAnuncios" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000" aria-label="Anuncios destacados">
+          ${bs.length > 1 ? `<div class="carousel-indicators">${bs.map((b, i) => `<button type="button" data-bs-target="#carruselAnuncios" data-bs-slide-to="${i}" ${i ? '' : 'class="active" aria-current="true"'} aria-label="Anuncio ${i + 1}"></button>`).join('')}</div>` : ''}
+          <div class="carousel-inner rounded-3">
+            ${bs.map((b, i) => { const { tema, boton } = bannerContenido(b); return `
+              <div class="carousel-item ${i ? '' : 'active'}">
+                <div class="ad-banner ad-${tema}">
+                  <span class="ad-etiqueta">Anuncio</span>
+                  <h3>${escapeHTML(b.titulo || '')}</h3>
+                  <p>${escapeHTML(b.texto || '')}</p>
+                  ${boton}
+                </div>
+              </div>`; }).join('')}
+          </div>
+          ${bs.length > 1 ? `
+          <button class="carousel-control-prev" type="button" data-bs-target="#carruselAnuncios" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Anterior</span></button>
+          <button class="carousel-control-next" type="button" data-bs-target="#carruselAnuncios" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Siguiente</span></button>` : ''}
+        </div>`;
+    }
+
+    // Banner que se intercala entre los resultados (cada 12 productos)
+    function bannerEntreResultados(n) {
+      const cat = $('filtroCategoria').value;
+      const candidatos = ANUNCIOS.banners.filter(b => b.categoria !== cat); // no anunciar la categoría que ya se está viendo
+      if (!candidatos.length) return '';
+      const b = candidatos[n % candidatos.length], { tema, boton } = bannerContenido(b);
+      return `<div class="col-12"><div class="ad-banner ad-banner-inline ad-${tema}">
+        <div><span class="ad-etiqueta">Anuncio</span><h3>${escapeHTML(b.titulo || '')}</h3><p>${escapeHTML(b.texto || '')}</p></div>
+        ${boton}
+      </div></div>`;
+    }
+
+    const terminosActuales = () => norm($('buscador').value).split(/\s+/).filter(Boolean);
+
+    function puntuar(p, terminos) {
+      let s = 0;
+      for (const t of terminos) {
+        const v = variantes(t);
+        if (!v.some(x => p._txt.includes(x))) return -1;
+        s += v.some(x => p._n.includes(x)) ? 10 : v.some(x => p._m.includes(x)) ? 6 : 1;
+      }
+      return s;
+    }
+
+    function resaltar(texto, terminos) {
+      if (!terminos.length) return escapeHTML(texto);
+      const patron = [...terminos].sort((a, b) => b.length - a.length).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[aeioun]/g, c => `[${ACENTOS[c]}]`)).join('|');
+      return texto.split(new RegExp(`(${patron})`, 'gi')).map((x, i) => i % 2 ? `<mark>${escapeHTML(x)}</mark>` : escapeHTML(x)).join('');
+    }
+
+    function aplicarFiltros() {
+      const terminos = terminosActuales(), cat = $('filtroCategoria').value, marca = $('filtroMarca').value, orden = $('ordenProductos').value;
+      const [min, max] = $('filtroPrecio').value ? $('filtroPrecio').value.split('-').map(Number) : [0, Infinity];
+      resultados = PRODUCTOS.map(p => ({ p, s: terminos.length ? puntuar(p, terminos) : 0 }))
+        .filter(({ p, s }) => s >= 0 && (!cat || p.c === cat) && (!marca || p.m === marca) && p.p >= min && p.p <= max)
+        .sort((a, b) => orden === 'precio-asc' ? a.p.p - b.p.p : orden === 'precio-desc' ? b.p.p - a.p.p : orden === 'nombre' ? a.p.titulo.localeCompare(b.p.titulo, 'es') : (b.s - a.s) || (a.p.id - b.p.id))
+        .map(r => r.p);
+      pagina = 1; renderizarResultados();
+    }
+
+    function tarjetaHTML(p, v, res) {
+      const colorPredeterminado = coloresSeleccionados[p.id] || p.colores[0];
+      if (!coloresSeleccionados[p.id]) coloresSeleccionados[p.id] = colorPredeterminado;
+
+      const htmlColores = p.colores.map(c => {
+        const esSeleccionado = c === colorPredeterminado ? 'selected' : '';
+        const claseColor = `swatch-${norm(c)}`;
+        return `<span class="swatch-color ${claseColor} ${esSeleccionado}" 
+                      title="${c}" 
+                      onclick="seleccionarColor(${p.id}, '${c}', this)" 
+                      role="button" 
+                      aria-label="Color ${c}"></span>`;
+      }).join(' ');
+
+      const patrocinado = ANUNCIOS.productos.has(p.idDb);
+      return `<div class="col-6 col-md-4 col-lg-3 producto${patrocinado ? ' tarjeta-patrocinada' : ''}" data-categoria="${p.c}">
+        <div class="card h-100 shadow-sm position-relative">
+          ${patrocinado ? '<span class="badge-patrocinado">Patrocinado</span>' : ''}
+          <img src="${p.img}" class="card-img-top" alt="${escapeHTML(p.titulo)}" loading="lazy">
+          <div class="card-body d-flex flex-column">
+            <div class="small text-muted mb-1">${p.c} · ${escapeHTML(p.m)}</div>
+            <h5 class="card-title h6 fw-bold mb-1">${resaltar(p.titulo, v)}</h5>
+            <p class="card-text fw-bold text-primary mb-2">$${p.p.toLocaleString()} MXN</p>
+            
+            <div class="mb-2">
+              <div class="small text-muted mb-1">Color: <strong id="color-label-${p.id}">${colorPredeterminado}</strong></div>
+              <div class="swatches-container d-flex gap-1 align-items-center">
+                ${htmlColores}
+              </div>
+            </div>
+
+            <button class="btn btn-outline-info btn-sm w-100 mb-2 py-0" onclick="verEspecificaciones(${p.id})">
+              📋 Especificaciones
+            </button>
+
+            <div class="mt-auto">
+              <div class="d-flex justify-content-center align-items-center gap-2 mb-2 selector-cantidad">
+                <button class="btn btn-outline-danger btn-sm" onclick="cambiarCantidadProducto(${p.id}, -1)" aria-label="Quitar una unidad">−</button>
+                <span id="cantidad-${p.id}" class="cantidad-valor">${cantidades[p.id] || 1}</span>
+                <button class="btn btn-outline-success btn-sm" onclick="cambiarCantidadProducto(${p.id}, 1)" aria-label="Agregar una unidad">+</button>
+              </div>
+              <button class="btn btn-primary w-100 mb-2" onclick="agregarCantidadSeleccionada(${p.id})">🛒 Agregar al Carrito</button>
+              <div id="resena-${p.id}" class="resumen-resena text-muted mb-2">${resumenResena(RESUMEN_RESENAS[idDbDe(p)])}</div>
+              <button class="btn btn-outline-secondary btn-sm w-100" onclick="abrirResenasId(${p.id})">⭐ Reseñas</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function renderizarResultados() {
+      const terminos = terminosActuales(), v = [...new Set(terminos.flatMap(variantes))], total = resultados.length;
+      const res = null, q = $('buscador').value.trim();
+      // Los patrocinados que coinciden con la búsqueda/filtros actuales suben al inicio (solo con orden por relevancia)
+      const patro = $('ordenProductos').value === 'relevancia' ? resultados.filter(p => ANUNCIOS.productos.has(p.idDb)).slice(0, 2) : [];
+      const base = patro.length ? resultados.filter(p => !patro.includes(p)) : resultados;
+      const mostrados = [...patro, ...base.slice(0, Math.max(0, pagina * POR_PAGINA - patro.length))];
+      $('productos').innerHTML = mostrados.map((p, i) =>
+        (i > 0 && i % 12 === 0 ? bannerEntreResultados(i / 12 - 1) : '') + tarjetaHTML(p, v, res)).join('');
+      $('sinResultados').classList.toggle('d-none', total > 0);
+      if (!total) mostrarSinResultados(terminos);
+      $('btnMas').classList.toggle('d-none', mostrados.length >= total);
+      $('btnMas').textContent = `Mostrar más productos (${total - mostrados.length} restantes de 500)`;
+      $('resumenResultados').textContent = total ? `Mostrando ${mostrados.length} de ${total} productos disponibles${q ? ` para «${q}»` : ''}` : `0 resultados${q ? ` para «${q}»` : ''}`;
+      $('btnLimpiarBusqueda').classList.toggle('d-none', !q);
+      renderizarChips();
+    }
+
+    function mostrarSinResultados(terminos) {
+      const q = $('buscador').value.trim();
+      $('sinResultados').innerHTML = `
+        <div class="fs-1" aria-hidden="true">🔍</div>
+        <h4 class="mt-2">No encontramos coincidencias${q ? ` para «${escapeHTML(q)}»` : ''}</h4>
+        <p class="text-muted mb-2">Prueba ajustando los filtros o utilizando una palabra clave diferente.</p>
+        <button type="button" class="btn btn-primary" onclick="limpiarFiltros()">Limpiar filtros y ver los 500 productos</button>`;
+    }
+
+    function renderizarChips() {
+      const f = [], q = $('buscador').value.trim();
+      if (q) f.push(['q', `Búsqueda: «${q}»`]);
+      if ($('filtroCategoria').value) f.push(['cat', $('filtroCategoria').value]);
+      if ($('filtroMarca').value) f.push(['marca', $('filtroMarca').value]);
+      if ($('filtroPrecio').value) f.push(['precio', $('filtroPrecio').selectedOptions[0].textContent]);
+      $('chipsFiltros').innerHTML = f.map(([k, t]) => `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" data-quitar="${k}">${escapeHTML(t)} ✕</button>`).join('');
+    }
+
+    function quitarFiltro(k) {
+      if (k === 'q') $('buscador').value = '';
+      if (k === 'cat') { $('filtroCategoria').value = ''; llenarMarcas(); }
+      if (k === 'marca') $('filtroMarca').value = '';
+      if (k === 'precio') $('filtroPrecio').value = '';
+      aplicarFiltros();
+    }
+
+    function llenarCategorias() {
+      const cuenta = {}; PRODUCTOS.forEach(p => cuenta[p.c] = (cuenta[p.c] || 0) + 1);
+      $('filtroCategoria').innerHTML = `<option value="">Todas las categorías (500)</option>` + Object.keys(cuenta).map(c => `<option value="${c}">${c} (${cuenta[c]})</option>`).join('');
+    }
+
+    function llenarMarcas() {
+      const cat = $('filtroCategoria').value, sel = $('filtroMarca'), actual = sel.value, cuenta = {};
+      PRODUCTOS.filter(p => !cat || p.c === cat).forEach(p => cuenta[p.m] = (cuenta[p.m] || 0) + 1);
+      sel.innerHTML = '<option value="">Todas las marcas</option>' + Object.keys(cuenta).sort((a, b) => a.localeCompare(b, 'es')).map(m => `<option value="${escapeHTML(m)}">${escapeHTML(m)} (${cuenta[m]})</option>`).join('');
+      sel.value = cuenta[actual] ? actual : '';
+    }
+
+    function limpiarCampos() {
+      $('buscador').value = ''; $('filtroCategoria').value = ''; $('filtroPrecio').value = ''; $('ordenProductos').value = 'relevancia'; llenarMarcas();
+    }
+    function limpiarFiltros() { limpiarCampos(); aplicarFiltros(); }
+
+    function cerrarSugerencias() { $('sugerencias').style.display = 'none'; sugerenciaActiva = -1; }
+    function mostrarSugerencias() {
+      const q = $('buscador').value.trim(), terminos = terminosActuales(), caja = $('sugerencias');
+      const items = q ? PRODUCTOS.map(p => ({ p, s: puntuar(p, terminos) })).filter(x => x.s >= 0).sort((a, b) => b.s - a.s || a.p.id - b.p.id).slice(0, 6).map(x => x.p.titulo) : BUSQUEDAS_POPULARES;
+      sugerenciaActiva = -1;
+      caja.innerHTML = (q ? '' : '<div class="list-group-item small text-muted">Búsquedas sugeridas</div>')
+        + (items.length ? items.map(t => `<button type="button" class="list-group-item list-group-item-action" role="option" data-q="${escapeHTML(t)}">${escapeHTML(t)}</button>`).join('') : `<div class="list-group-item text-muted small">Sin coincidencias para «${escapeHTML(q)}»</div>`);
+      caja.style.display = 'block';
+    }
+
+    function iniciarCatalogo() {
+      llenarCategorias(); llenarMarcas();
+      const buscador = $('buscador'); let temporizador;
+      buscador.addEventListener('input', () => { clearTimeout(temporizador); mostrarSugerencias(); temporizador = setTimeout(aplicarFiltros, 200); });
+      buscador.addEventListener('focus', mostrarSugerencias);
+      $('formBusqueda').addEventListener('submit', e => { e.preventDefault(); cerrarSugerencias(); aplicarFiltros(); });
+      $('btnLimpiarBusqueda').addEventListener('click', () => { buscador.value = ''; aplicarFiltros(); buscador.focus(); });
+      $('filtroCategoria').addEventListener('change', () => { llenarMarcas(); aplicarFiltros(); });
+      ['filtroMarca', 'filtroPrecio', 'ordenProductos'].forEach(id => $(id).addEventListener('change', aplicarFiltros));
+      $('btnMas').addEventListener('click', () => { pagina++; renderizarResultados(); });
+      document.addEventListener('mousedown', e => { if (!e.target.closest('#formBusqueda')) cerrarSugerencias(); });
+      document.addEventListener('click', e => {
+        const q = e.target.closest('[data-q]'); if (q) { $('buscador').value = q.dataset.q; cerrarSugerencias(); return aplicarFiltros(); }
+        const ad = e.target.closest('[data-ad-cat]'); if (ad) return irACategoria(ad.dataset.adCat);
+        const x = e.target.closest('[data-quitar]'); if (x) quitarFiltro(x.dataset.quitar);
+      });
+      aplicarFiltros();
+    }
+
+    // ---- Reseñas (guardadas en SQL Server vía /api/resenas) ----
+    let RESUMEN_RESENAS = {}; // { idDb: { n, promedio } }
+    const idDbDe = p => p.idDb ?? (p.id + 1);
+
+    async function cargarResumenResenas() {
+      try {
+        const r = await fetch(`${API_BASE}/api/resenas/resumen`);
+        if (r.ok) RESUMEN_RESENAS = await r.json();
+      } catch (err) { console.warn('Reseñas no disponibles:', err); }
+    }
+    function estrellas(n) { return '★'.repeat(n) + '☆'.repeat(5-n); }
+    function resumenResena(r) {
+      if (!r || !r.n) return 'Sin reseñas todavía';
+      return `<span class="estrellas">${estrellas(Math.round(r.promedio))}</span> ${Number(r.promedio).toFixed(1)} (${r.n})`;
+    }
+    function actualizarResumenesEnPantalla() {
+      PRODUCTOS.forEach(p => { const el = document.getElementById('resena-' + p.id); if (el) el.innerHTML = resumenResena(RESUMEN_RESENAS[idDbDe(p)]); });
+    }
+
+    async function cargarListaResenas(idDb) {
+      const caja = $('listaResenas');
+      try {
+        const r = await fetch(`${API_BASE}/api/resenas?producto=${idDb}`);
+        const datos = await r.json();
+        if (!r.ok) throw new Error(datos.error);
+        caja.innerHTML = datos.length
+          ? datos.map(x => `<div class="border rounded p-3 mb-2"><div class="d-flex justify-content-between"><strong>${escapeHTML(x.usuario)}</strong><span class="estrellas">${estrellas(x.calificacion)}</span></div><p class="mb-0 mt-2">${escapeHTML(x.comentario)}</p></div>`).join('')
+          : '<p class="text-muted">Todavía no hay reseñas para este producto.</p>';
+      } catch (err) {
+        caja.innerHTML = '<div class="alert alert-danger">No se pudieron cargar las reseñas. Verifica que el servidor esté encendido.</div>';
+      }
+    }
+
+    function abrirResenasId(id) { abrirResenas(idDbDe(PRODUCTOS[id])); }
+    function abrirResenas(idDb) {
+      productoResenaActual = idDb;
+      const prod = PRODUCTOS.find(x => idDbDe(x) === idDb);
+      $('tituloResenas').textContent = `Reseñas: ${prod ? prod.titulo : ''}`;
+      const usuario = obtenerUsuarioActual();
+      $('avisoLoginResena').style.display = usuario ? 'none' : 'block'; $('btnEnviarResena').disabled = !usuario;
+      $('errorResena').classList.add('d-none'); $('formResena').reset();
+      $('listaResenas').innerHTML = '<p class="text-muted">Cargando…</p>';
+      bootstrap.Modal.getOrCreateInstance($('resenasModal')).show();
+      cargarListaResenas(idDb);
+    }
+
+    async function publicarResena(e) {
+      e.preventDefault();
+      const usuario = obtenerUsuarioActual(), error = $('errorResena'), btn = $('btnEnviarResena');
+      if (!usuario) return mostrarMensaje('Inicia sesión para publicar una reseña.', 'warning');
+      error.classList.add('d-none'); btn.disabled = true;
+      try {
+        const resp = await fetch(`${API_BASE}/api/resenas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: { nombre: usuario.nombre, correo: usuario.correo }, producto: productoResenaActual,
+                                 calificacion: $('calificacionResena').value, comentario: $('comentarioResena').value })
+        });
+        const d = await resp.json().catch(() => ({}));
+        if (!resp.ok) { error.textContent = d.error || 'No se pudo publicar la reseña.'; error.classList.remove('d-none'); return; }
+        $('formResena').reset();
+        mostrarMensaje('¡Gracias! Tu reseña fue publicada.', 'success');
+        await cargarResumenResenas(); actualizarResumenesEnPantalla(); await cargarListaResenas(productoResenaActual);
+      } catch (err) {
+        error.textContent = 'No se pudo contactar al servidor. Verifica que esté encendido.'; error.classList.remove('d-none');
+      } finally { btn.disabled = !obtenerUsuarioActual(); }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      actualizarZonaUsuario();
+      actualizarBadge();
+      await Promise.all([cargarProductos(), cargarAnuncios(), cargarResumenResenas()]);
+      $('formResena').addEventListener('submit', publicarResena);
+      renderizarHero();
+      iniciarCatalogo();
+
+      document.getElementById('confirmarCompraBtn').addEventListener('click', confirmarCompra);
+
+      // Código postal: solo dígitos, consulta el envío al completar los 5
+      const cpInput = document.getElementById('codigoPostal');
+      cpInput.addEventListener('input', () => {
+        cpInput.value = cpInput.value.replace(/\D/g, '').slice(0, 5);
+        consultarEnvio(cpInput.value);
+      });
+
+      // Formato de tarjeta (grupos de 4) y fecha MM/AA
+      $('pagoNumero').addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ');
+      });
+      $('pagoExp').addEventListener('input', e => {
+        const d = e.target.value.replace(/\D/g, '').slice(0, 4);
+        e.target.value = d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+      });
+      $('pagoCvv').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
+
+      document.getElementById('formLogin').addEventListener('submit', e => {
+        e.preventDefault(); 
+        const correo = document.getElementById('loginCorreo').value.trim().toLowerCase();
+        const password = document.getElementById('loginPassword').value;
+        const usuario = obtenerUsuarios().find(u => u.correo === correo && u.password === password);
+        if (!usuario) return mostrarMensaje('Correo o contraseña incorrectos.', 'danger');
+        guardarSesion(usuario, document.getElementById('mantenerSesion').checked); 
+        actualizarZonaUsuario(); actualizarBadge();
+        bootstrap.Modal.getInstance(document.getElementById('cuentaModal'))?.hide(); 
+        e.target.reset(); 
+        mostrarMensaje(`¡Bienvenido de nuevo, ${usuario.nombre}!`, 'success');
+      });
+
+      document.getElementById('formRegistro').addEventListener('submit', e => {
+        e.preventDefault(); 
+        const nombre=document.getElementById('registroNombre').value.trim();
+        const correo=document.getElementById('registroCorreo').value.trim().toLowerCase();
+        const password=document.getElementById('registroPassword').value;
+        const usuarios=obtenerUsuarios(); 
+        if (usuarios.some(u=>u.correo===correo)) return mostrarMensaje('Ya existe una cuenta registrada con ese correo.', 'warning');
+        usuarios.push({nombre,correo,password}); 
+        guardarUsuarios(usuarios); 
+        guardarSesion({nombre,correo}, true); 
+        actualizarZonaUsuario(); actualizarBadge();
+        bootstrap.Modal.getInstance(document.getElementById('cuentaModal'))?.hide(); 
+        e.target.reset(); 
+        mostrarMensaje('Cuenta creada correctamente.', 'success');
+      });
+
+      document.getElementById('formEnvio').addEventListener('submit', e => {
+        e.preventDefault();
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) {
+          bootstrap.Modal.getInstance(document.getElementById('envioModal'))?.hide();
+          mostrarMensaje('Debes iniciar sesión para continuar.', 'warning');
+          new bootstrap.Modal(document.getElementById('cuentaModal')).show();
+          return;
+        }
+
+        const direccion = document.getElementById('direccionEnvio').value.trim();
+        const descripcion = document.getElementById('descripcionLugar').value.trim();
+        const cp = document.getElementById('codigoPostal').value.trim();
+
+        if (!direccion || !descripcion) {
+          return mostrarMensaje('Completa todos los campos correctamente.', 'warning');
+        }
+        if (!envioActual || envioActual.cp !== cp) {
+          return mostrarMensaje('Ingresa un código postal válido y espera a que se calcule el envío.', 'warning');
+        }
+        const distancia = envioActual.distanciaKm;
+
+        datosEnvio = { direccion, descripcion, cp };
+        localStorage.setItem(`envio_${usuario.correo}`, JSON.stringify(datosEnvio));
+        bootstrap.Modal.getInstance(document.getElementById('envioModal'))?.hide();
+
+        const carrito = obtenerCarrito();
+        const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+        const costoEnvio = envioActual.costo;
+        const total = subtotal + costoEnvio;
+
+        const resumenHtml = `
+          <ul class="list-unstyled mb-2 small">
+            <li>📍 <strong>Dirección:</strong> ${escapeHTML(direccion)}</li>
+            <li>📮 <strong>C.P.:</strong> ${escapeHTML(cp)} · ${escapeHTML(envioActual.estado)} (≈ ${distancia} km)</li>
+          </ul>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between small"><span>Subtotal productos:</span><span>$${subtotal.toLocaleString()} MXN</span></div>
+          <div class="d-flex justify-content-between small"><span>Costo de envío (${costoEnvio > 0 ? 'Tarifa >500km' : 'Gratis ≤500km'}):</span><span>$${costoEnvio} MXN</span></div>
+          <div class="d-flex justify-content-between fw-bold text-success fs-5 mt-1"><span>Total a pagar:</span><span>$${total.toLocaleString()} MXN</span></div>
+        `;
+        document.getElementById('resumenCheckout').innerHTML = resumenHtml;
+        document.getElementById('formPago').reset();
+        document.getElementById('errorPago').classList.add('d-none');
+
+        setTimeout(() => new bootstrap.Modal(document.getElementById('confirmarPagoModal')).show(), 300);
+      });
+    });
+
+    document.getElementById('carritoModal').addEventListener('show.bs.modal', renderizarCarrito);
+  </script>
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

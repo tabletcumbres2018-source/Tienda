@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Panel de ventas - LocalStorage</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f5efe3; --surface: #fffaf0;
+    --ink: #3b2a1e; --ink-2: #6b5644; --ink-3: #8a7763;
+    --grid: #e6dac0; --axis: #cdbb99; --border: rgba(59,42,30,.14);
+    --series: #2e6b3c; --series-soft: #cfe0c6;
+    --good: #006300; --warn-bg: #fff3d6; --warn-ink: #7a5200; --crit: #b52f2f;
+    --btn: #2e6b3c; --btn-ink: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #17120d; --surface: #211a13;
+      --ink: #f1e9da; --ink-2: #cdbfa6; --ink-3: #9a8a72;
+      --grid: #30271d; --axis: #4a3d2d; --border: rgba(255,240,220,.12);
+      --series: #7fbf6a; --series-soft: #2f5a2a;
+      --good: #0ca30c; --warn-bg: #3a2c05; --warn-ink: #fab219; --crit: #e66767;
+      --btn: #7fbf6a; --btn-ink: #11200d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #17120d; --surface: #211a13;
+    --ink: #f1e9da; --ink-2: #cdbfa6; --ink-3: #9a8a72;
+    --grid: #30271d; --axis: #4a3d2d; --border: rgba(255,240,220,.12);
+    --series: #7fbf6a; --series-soft: #2f5a2a;
+    --good: #0ca30c; --warn-bg: #3a2c05; --warn-ink: #fab219; --crit: #e66767;
+    --btn: #7fbf6a; --btn-ink: #11200d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+  header.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  .sub { color: var(--ink-2); font-size: .85rem; }
+  button, select, input { font: inherit; }
+  .btn { background: var(--btn); color: var(--btn-ink); border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--border); font-weight: 500; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .grid-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile .label { color: var(--ink-2); font-size: .8rem; }
+  .tile .value { font-size: 1.7rem; font-weight: 700; line-height: 1.2; margin-top: 4px; overflow-wrap: anywhere; }
+  .tile .value.texto { font-size: 1.05rem; line-height: 1.3; font-weight: 600; }
+  .tile.hero { grid-column: span 2; }
+  .tile.hero .value { font-size: 2.4rem; }
+  .tile .note { color: var(--ink-3); font-size: .78rem; margin-top: 2px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  /* Barras horizontales ordenadas (una sola tonalidad) */
+  .rank { display: grid; grid-template-columns: minmax(90px, 32%) 1fr auto; gap: 6px 10px; align-items: center; font-size: .88rem; }
+  .rank .name { color: var(--ink); overflow-wrap: anywhere; }
+  .rank .track { height: 14px; border-radius: 0 4px 4px 0; background: transparent; }
+  .rank .bar { height: 100%; background: var(--series); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .rank .num { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rank .row { display: contents; }
+  .rank .row:hover .name, .rank .row:hover .num { color: var(--ink); font-weight: 600; }
+  .rank .row:hover .bar { filter: brightness(1.15); }
+  /* Columnas por día */
+  .cols { display: flex; align-items: flex-end; gap: 4px; height: 170px; border-bottom: 1px solid var(--axis); padding-top: 8px;
+          background: repeating-linear-gradient(to top, transparent 0 41px, var(--grid) 41px 42px); }
+  .cols .col { flex: 1 1 0; min-width: 6px; max-width: 46px; background: var(--series); border-radius: 4px 4px 0 0; cursor: default; }
+  .cols .col:hover { filter: brightness(1.15); }
+  .cols-axis { display: flex; justify-content: space-between; color: var(--ink-3); font-size: .75rem; margin-top: 4px; }
+  .empty { color: var(--ink-2); padding: 20px 0; text-align: center; }
+  /* Tabla */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th { text-align: left; color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--axis); padding: 8px 10px; white-space: nowrap; }
+  td { border-bottom: 1px solid var(--grid); padding: 8px 10px; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .estado { display: inline-flex; gap: 4px; align-items: center; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: .8rem; white-space: nowrap; }
+  .estado.Pagado { background: var(--warn-bg); color: var(--warn-ink); }
+  .estado.Enviado, .estado.Entregado { color: var(--good); }
+  .estado.Cancelado { color: var(--crit); }
+  .detalle td { background: var(--page); font-size: .84rem; }
+  .detalle ul { margin: 0 0 8px; padding-left: 18px; }
+  .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+  select { background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  /* Login */
+  #login { max-width: 360px; margin: 12vh auto; }
+  #login input { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--ink); margin: 8px 0 12px; }
+  .error { color: var(--crit); font-size: .85rem; min-height: 1.2em; }
+  #tip { position: fixed; z-index: 10; pointer-events: none; background: var(--ink); color: var(--page); padding: 6px 9px; border-radius: 6px; font-size: .8rem; display: none; max-width: 260px; }
+  #toast { position: fixed; bottom: 16px; right: 16px; background: var(--ink); color: var(--page); padding: 10px 14px; border-radius: 8px; display: none; z-index: 20; max-width: 90vw; }
+  @media (max-width: 560px) { .tile.hero { grid-column: span 1; } .rank { grid-template-columns: 1fr auto; } .rank .track { grid-column: 1 / -1; order: 3; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="login" class="card" hidden>
+    <h1>Panel de ventas</h1>
+    <p class="sub">Acceso solo para administradores.</p>
+    <form id="formLogin">
+      <label for="clave">Clave de administrador</label>
+      <input id="clave" type="password" autocomplete="current-password" required>
+      <div id="errLogin" class="error" role="alert"></div>
+      <button class="btn" type="submit" style="width:100%">Entrar</button>
+    </form>
+  </div>
+
+  <div id="app" hidden>
+    <header class="top">
+      <div>
+        <h1>Panel de ventas · LocalStorage</h1>
+        <div class="sub" id="actualizado"></div>
+      </div>
+      <div class="acciones">
+        <button class="btn ghost" id="btnRefrescar" type="button">↻ Actualizar</button>
+        <button class="btn ghost" id="btnSalir" type="button">Salir</button>
+      </div>
+    </header>
+
+    <section class="grid-kpi" id="kpis" aria-label="Indicadores principales"></section>
+
+    <section class="charts">
+      <div class="card"><h2>Ventas por categoría</h2><div id="chCategoria"></div></div>
+      <div class="card"><h2>Pedidos por estado</h2><div id="chEstado"></div></div>
+      <div class="card" style="grid-column: 1 / -1"><h2>Ventas por día (últimos 30 días)</h2><div id="chDia"></div></div>
+    </section>
+
+    <section class="card">
+      <h2>Pedidos</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Folio</th><th>Fecha</th><th>Cliente</th><th>Destino</th><th class="num">Total</th><th>Estado</th><th>Acción</th></tr></thead>
+          <tbody id="tbPedidos"></tbody>
+        </table>
+      </div>
+      <p class="sub">Al cambiar el estado se registra un correo para el cliente. En modo local el correo se simula; en el servidor real se envía.</p>
+    </section>
+  </div>
+</div>
+<div id="tip" role="tooltip"></div>
+<div id="toast" role="status"></div>
+
+<script>
+  // Si abres el archivo directo (doble clic), el navegador bloquea la API: pasa a la dirección del servidor.
+  if (location.protocol === 'file:') location.replace('http://localhost:3000/admin');
+  const API = location.protocol === 'file:' ? 'http://localhost:3000' : '';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+  const mxn = n => '$' + Number(n).toLocaleString('es-MX', { maximumFractionDigits: 0 }) + ' MXN';
+  const fecha = f => new Date(f).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  const SIGUIENTE = { Pendiente: ['Pagado', 'Cancelado'], Pagado: ['Enviado', 'Cancelado'], Enviado: ['Entregado', 'Cancelado'], Entregado: [], Cancelado: [] };
+  const ICONO = { Pendiente: '◔', Pagado: '●', Enviado: '➜', Entregado: '✓', Cancelado: '✕' };
+  const clave = () => { try { return sessionStorage.getItem('claveAdmin') || ''; } catch { return ''; } };
+
+  async function api(ruta, opciones = {}) {
+    const resp = await fetch(API + ruta, { ...opciones, headers: { 'Content-Type': 'application/json', 'x-admin-key': clave(), ...(opciones.headers || {}) } });
+    const datos = await resp.json().catch(() => ({}));
+    if (resp.status === 401) { salir(true); throw new Error(datos.error || 'Sesión no válida'); }
+    if (!resp.ok) throw new Error(datos.error || 'Error ' + resp.status);
+    return datos;
+  }
+
+  function toast(t) { const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => e.style.display = 'none', 4000); }
+
+  // Tooltip: cualquier elemento con data-tip
+  document.addEventListener('mousemove', e => {
+    const t = e.target.closest('[data-tip]'), tip = $('tip');
+    if (!t) return tip.style.display = 'none';
+    tip.textContent = t.dataset.tip; tip.style.display = 'block';
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+  });
+
+  function tile(label, valor, nota, hero, texto) {
+    return `<div class="card tile${hero ? ' hero' : ''}"><div class="label">${esc(label)}</div><div class="value${texto ? ' texto' : ''}">${valor}</div>${nota ? `<div class="note">${esc(nota)}</div>` : ''}</div>`;
+  }
+
+  function barras(filas, fmt) { // filas: [{nombre, valor, tip}]
+    if (!filas.length) return '<div class="empty">Sin datos todavía</div>';
+    const max = Math.max(...filas.map(f => f.valor)) || 1;
+    return `<div class="rank">${filas.map(f => `
+      <div class="row" data-tip="${esc(f.tip)}">
+        <div class="name">${esc(f.nombre)}</div>
+        <div class="track"><div class="bar" style="width:${(f.valor / max * 100).toFixed(1)}%"></div></div>
+        <div class="num">${fmt(f.valor)}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  function columnas(dias) {
+    if (!dias.length) return '<div class="empty">Sin ventas en los últimos 30 días</div>';
+    const mapa = Object.fromEntries(dias.map(d => [d.dia, d]));
+    const lista = [];
+    for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const k = d.toLocaleDateString('en-CA'); lista.push({ dia: k, ...(mapa[k] || { ventas: 0, pedidos: 0 }) }); }
+    const max = Math.max(...lista.map(d => d.ventas)) || 1;
+    const corto = k => new Date(k + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+    return `<div class="cols" role="img" aria-label="Ventas diarias de los últimos 30 días">${lista.map(d =>
+      `<div class="col" style="height:${d.ventas ? Math.max(3, d.ventas / max * 100) : 0}%" data-tip="${corto(d.dia)}: ${mxn(d.ventas)} · ${d.pedidos} pedido(s)"></div>`).join('')}</div>
+      <div class="cols-axis"><span>${corto(lista[0].dia)}</span><span>${corto(lista[29].dia)}</span></div>`;
+  }
+
+  async function cargar() {
+    const [k, pedidos] = await Promise.all([api('/api/admin/kpis'), api('/api/admin/pedidos')]);
+    $('kpis').innerHTML =
+      tile('Ventas totales', mxn(k.ventasTotales), 'Sin pedidos cancelados', true) +
+      tile('Pedidos', k.pedidos) +
+      tile('Ticket promedio', mxn(k.ticketPromedio)) +
+      tile('Producto más vendido', k.productoTop ? esc(k.productoTop.nombre) : '—', k.productoTop ? `${k.productoTop.unidades} unidad(es)` : '', false, true) +
+      tile('Por enviar', k.porEnviar, 'Pedidos pagados sin enviar');
+
+    $('chCategoria').innerHTML = barras(
+      k.porCategoria.map(c => ({ nombre: c.categoria, valor: c.ventas, tip: `${c.categoria}: ${mxn(c.ventas)} · ${c.unidades} unidad(es)` })), mxn);
+    const orden = ['Pagado', 'Enviado', 'Entregado', 'Cancelado', 'Pendiente'];
+    $('chEstado').innerHTML = barras(
+      [...k.porEstado].sort((a, b) => orden.indexOf(a.estado) - orden.indexOf(b.estado) || b.pedidos - a.pedidos)
+        .map(e => ({ nombre: `${ICONO[e.estado] || '•'} ${e.estado}`, valor: e.pedidos, tip: `${e.estado}: ${e.pedidos} pedido(s)` })), n => n);
+    $('chDia').innerHTML = columnas(k.porDia);
+
+    $('tbPedidos').innerHTML = pedidos.length ? pedidos.map(filaPedido).join('') : '<tr><td colspan="7" class="empty">Aún no hay pedidos.</td></tr>';
+    $('actualizado').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX');
+  }
+
+  function filaPedido(p) {
+    const opciones = SIGUIENTE[p.estado] || [];
+    const accion = opciones.length
+      ? `<div class="acciones"><select aria-label="Nuevo estado de ${esc(p.folio)}" data-sel="${esc(p.folio)}">${opciones.map(o => `<option>${o}</option>`).join('')}</select>
+         <button class="btn" type="button" data-aplicar="${esc(p.folio)}" data-correo="${esc(p.correo)}">Aplicar</button></div>`
+      : '<span class="sub">Sin acciones</span>';
+    return `<tr>
+      <td><button class="btn ghost" type="button" data-detalle="${esc(p.folio)}" aria-expanded="false" style="padding:3px 8px">▸ ${esc(p.folio)}</button></td>
+      <td>${fecha(p.fecha)}</td><td>${esc(p.cliente)}<div class="sub">${esc(p.correo)}</div></td>
+      <td>${esc(p.estadoEnvio)}<div class="sub">C.P. ${esc(p.cp)}</div></td>
+      <td class="num">${mxn(p.total)}</td>
+      <td><span class="estado ${esc(p.estado)}">${ICONO[p.estado] || '•'} ${esc(p.estado)}</span></td>
+      <td>${accion}</td></tr>
+      <tr class="detalle" id="det-${esc(p.folio)}" hidden><td colspan="7">
+        <strong>Productos</strong>
+        <ul>${p.items.map(i => `<li>${i.cantidad} × ${esc(i.producto)} (${esc(i.color)}) — ${mxn(i.precio * i.cantidad)}</li>`).join('')}</ul>
+        Subtotal ${mxn(p.subtotal)} · Envío ${p.envio ? mxn(p.envio) : 'gratis'} · <strong>Total ${mxn(p.total)}</strong><br>
+        Entrega: ${esc(p.direccion)}<br>
+        <strong>Correos al cliente:</strong> ${p.correos.length ? p.correos.map(c => `${esc(c.asunto)} <em>(${esc(c.resultado)}, ${fecha(c.fecha)})</em>`).join(' · ') : 'ninguno'}
+      </td></tr>`;
+  }
+
+  document.addEventListener('click', async e => {
+    const d = e.target.closest('[data-detalle]');
+    if (d) { const fila = $('det-' + d.dataset.detalle); fila.hidden = !fila.hidden; d.setAttribute('aria-expanded', !fila.hidden); d.textContent = (fila.hidden ? '▸ ' : '▾ ') + d.dataset.detalle; return; }
+    const a = e.target.closest('[data-aplicar]');
+    if (a) {
+      const folio = a.dataset.aplicar, estado = document.querySelector(`[data-sel="${folio}"]`).value;
+      if (!confirm(`¿Cambiar ${folio} a "${estado}"?\nSe enviará un correo a ${a.dataset.correo}.`)) return;
+      a.disabled = true;
+      try { await api(`/api/admin/pedidos/${encodeURIComponent(folio)}/estado`, { method: 'POST', body: JSON.stringify({ estado }) }); toast(`${folio} ahora está "${estado}". Correo registrado.`); await cargar(); }
+      catch (err) { toast(err.message); a.disabled = false; }
+    }
+  });
+
+  function salir(porError) {
+    try { sessionStorage.removeItem('claveAdmin'); } catch {}
+    $('app').hidden = true; $('login').hidden = false;
+    $('errLogin').textContent = porError ? 'Sesión no válida. Vuelve a entrar.' : '';
+  }
+
+  async function entrar() {
+    $('login').hidden = true; $('app').hidden = false;
+    try { await cargar(); } catch (err) { if (clave()) { toast(err.message); } }
+  }
+
+  $('formLogin').addEventListener('submit', async e => {
+    e.preventDefault();
+    try { sessionStorage.setItem('claveAdmin', $('clave').value); } catch {}
+    $('errLogin').textContent = '';
+    try { await api('/api/admin/kpis'); $('clave').value = ''; entrar(); }
+    catch (err) { $('errLogin').textContent = err.message.includes('Clave') ? 'Clave incorrecta.' : 'No se pudo conectar con el servidor.'; $('login').hidden = false; $('app').hidden = true; }
+  });
+  $('btnRefrescar').addEventListener('click', () => cargar().catch(err => toast(err.message)));
+  $('btnSalir').addEventListener('click', () => salir(false));
+
+  clave() ? entrar() : ($('login').hidden = false);
+</script>
+</body>
+</html>
