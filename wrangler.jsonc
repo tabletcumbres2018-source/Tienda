@@ -1,0 +1,11 @@
+{
+  // Worker "tienda": archivos estáticos de public/ + API en /api/*
+  "name": "tienda",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-01-01",
+  "keep_vars": true,
+  "assets": {
+    "directory": "./public",
+    "run_worker_first": ["/api/*"]
+  }
+}
