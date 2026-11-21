@@ -178,6 +178,9 @@
     .ad-verde   { background: linear-gradient(135deg, #1f4d2c, #3f7a3b); }   /* verde */
     .ad-naranja { background: linear-gradient(135deg, #6e4217, #9c6628); }   /* caramelo */
 
+    /* Ayuda (acordeón) con los colores de la tienda */
+    .accordion { --bs-accordion-bg: var(--panel-2, #fff); --bs-accordion-active-bg: #e9efe0; --bs-accordion-active-color: var(--verde-oscuro, #1f4d2c); --bs-accordion-btn-focus-box-shadow: 0 0 0 .2rem rgba(46,107,60,.22); }
+
     /* Columna de filtros fija al hacer scroll (debajo de la barra de navegación) */
     :root { --alto-nav: 64px; }
     @media (min-width: 992px) {
@@ -207,6 +210,9 @@
   <!-- Heurística 1: Visibilidad del estado del sistema -->
   <div id="mensajeSistema" class="alert alert-info shadow" role="status" aria-live="polite"></div>
 
+  <!-- Heurística 2: Relación entre el sistema y el mundo real:
+       lenguaje del cliente (español, pesos MXN, "carrito", "folio", "envío"), íconos reconocibles (🛒 📦 🚚)
+       y mensajes sin términos técnicos. -->
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
     <div class="container-fluid">
@@ -225,6 +231,8 @@
         🛍️ Ver Carrito
         <span id="badgeCarrito" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
       </button>
+      <!-- Heurística 10: Ayuda y documentación siempre a la mano -->
+      <button class="btn btn-outline-light ms-3" type="button" data-bs-toggle="modal" data-bs-target="#ayudaModal" aria-label="Ayuda y preguntas frecuentes">❓<span class="d-none d-md-inline"> Ayuda</span></button>
       <div id="zonaUsuario" class="ms-3"></div>
     </div>
   </nav>
@@ -306,7 +314,7 @@
         </div>
         <div id="chipsFiltros" class="d-flex flex-wrap gap-2 mb-3"></div>
 
-        <!-- Heurística 9: Ayuda en manejo de errores y sin resultados -->
+        <!-- Heurística 9: Ayuda a reconocer y corregir errores (sin resultados, conexión, pago rechazado: qué pasó y qué hacer) -->
         <div id="sinResultados" class="text-center d-none" role="status"></div>
 
         <!-- Grilla de Productos -->
@@ -315,6 +323,94 @@
         <div class="text-center my-4">
           <button id="btnMas" type="button" class="btn btn-outline-primary d-none"></button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Heurística 10: Ayuda y documentación (preguntas frecuentes) -->
+  <div class="modal fade" id="ayudaModal" tabindex="-1" aria-labelledby="ayudaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="ayudaLabel">❓ Ayuda y preguntas frecuentes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="accordion" id="acordeonAyuda">
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ay1" aria-expanded="true">🛒 ¿Cómo hago una compra?</button></h2>
+              <div id="ay1" class="accordion-collapse collapse show" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                <ol class="mb-0">
+                  <li>Busca un producto o usa los <strong>filtros</strong> de la izquierda (categoría, marca y rango de precio).</li>
+                  <li>Elige el color y la cantidad, y presiona <strong>Agregar al Carrito</strong>.</li>
+                  <li>Abre <strong>🛍️ Ver Carrito</strong> y presiona <strong>Proceder al Pago</strong>.</li>
+                  <li>Escribe tu dirección y código postal: el costo de envío se calcula solo.</li>
+                  <li>Revisa el resumen, escribe los datos de tu tarjeta y presiona <strong>Confirmar y Pagar</strong>.</li>
+                </ol>
+                <p class="small text-muted mt-2 mb-0">Necesitas una cuenta para pagar. Puedes crearla en <strong>👤 Iniciar sesión → Crear cuenta</strong>.</p>
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay2">🚚 ¿Cuánto cuesta el envío?</button></h2>
+              <div id="ay2" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                El envío es <strong>gratis</strong> hasta 500 km de nuestra bodega. Si tu domicilio está a más de 500 km, se cobra una tarifa fija de <strong>$50 MXN</strong>. La distancia se calcula con tu código postal y verás el costo antes de pagar.
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay3">💳 ¿Qué formas de pago aceptan?</button></h2>
+              <div id="ay3" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                Tarjetas Visa y Mastercard. <span class="badge bg-warning text-dark">Modo de prueba</span> Esta tienda es un proyecto escolar y no cobra dinero real: usa la tarjeta de prueba <code>4242 4242 4242 4242</code>, cualquier fecha futura (por ejemplo 12/30) y cualquier CVV de 3 dígitos.
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay4">📧 ¿Cómo sé que mi compra se realizó?</button></h2>
+              <div id="ay4" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                Al pagar verás tu <strong>folio</strong> (por ejemplo MS-000010) y te enviamos un correo de <strong>Confirmación de compra</strong> al correo de tu cuenta. Si no lo ves, revisa tu carpeta de spam. También puedes consultar tus compras en <strong>👤 tu nombre → 📦 Mis pedidos</strong>.
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay5">📦 ¿Qué significa el estado de mi pedido?</button></h2>
+              <div id="ay5" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                <ul class="mb-0">
+                  <li><span class="badge bg-success">Pagado</span> recibimos tu pago y estamos preparando tu pedido.</li>
+                  <li><span class="badge bg-primary">Enviado</span> tu pedido va en camino.</li>
+                  <li><span class="badge bg-secondary">Entregado</span> tu pedido llegó a tu domicilio.</li>
+                  <li><span class="badge bg-danger">Cancelado</span> el pedido fue cancelado.</li>
+                </ul>
+                <p class="small text-muted mt-2 mb-0">Cada vez que cambia el estado te avisamos por correo.</p>
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay6">↩️ ¿Puedo cancelar mi pedido?</button></h2>
+              <div id="ay6" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                Sí, mientras esté en estado <strong>Pagado</strong> (antes de que lo enviemos). Entra a <strong>📦 Mis pedidos</strong> y presiona <strong>Cancelar pedido</strong>. Una vez <strong>Enviado</strong> ya no se puede cancelar desde la página.
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay7">🛡️ ¿Los productos tienen garantía?</button></h2>
+              <div id="ay7" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                Sí, todos los productos tienen garantía de 12 meses. Puedes ver las características de cada uno en <strong>📋 Especificaciones</strong>.
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay8">🔐 Problemas con mi cuenta</button></h2>
+              <div id="ay8" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                <ul class="mb-0">
+                  <li>La contraseña debe tener al menos <strong>6 caracteres</strong>.</li>
+                  <li>Si al crear tu cuenta te pide confirmarla, revisa tu correo y abre el enlace antes de iniciar sesión.</li>
+                  <li>Tu carrito se guarda en tu cuenta en este navegador.</li>
+                </ul>
+              </div></div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ay9">💬 ¿Cómo los contacto?</button></h2>
+              <div id="ay9" class="accordion-collapse collapse" data-bs-parent="#acordeonAyuda"><div class="accordion-body">
+                Responde a cualquier correo de tu pedido (confirmación, envío o entrega) e incluye tu folio. Te contestaremos lo antes posible.
+              </div></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
       </div>
     </div>
   </div>
@@ -350,8 +446,17 @@
             </div>
           </div>
           
+          <!-- Heurística 5: confirmación antes de vaciar; Heurística 3: se puede deshacer -->
           <div class="d-flex justify-content-end mt-3">
-            <button class="btn btn-outline-danger btn-sm btn-accion" onclick="vaciarCarrito()">Vaciar Carrito</button>
+            <button id="btnVaciarCarrito" class="btn btn-outline-danger btn-sm btn-accion" onclick="pedirVaciarCarrito()">Vaciar Carrito</button>
+          </div>
+          <div id="confirmarVaciar" class="alert alert-warning d-none mt-3 mb-0" role="alertdialog" aria-labelledby="textoVaciarCarrito">
+            <div class="fw-semibold mb-1">¿Vaciar el carrito?</div>
+            <div id="textoVaciarCarrito" class="small mb-2"></div>
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelarVaciarCarrito()">No, conservarlo</button>
+              <button type="button" id="btnConfirmarVaciar" class="btn btn-sm btn-danger" onclick="confirmarVaciarCarrito()">Sí, vaciar</button>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -492,7 +597,7 @@
               <form id="formRegistro">
                 <div class="mb-3"><label class="form-label">Nombre</label><input id="registroNombre" class="form-control" required></div>
                 <div class="mb-3"><label class="form-label">Correo</label><input id="registroCorreo" type="email" class="form-control" required></div>
-                <div class="mb-3"><label class="form-label">Contraseña</label><input id="registroPassword" type="password" minlength="4" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">Contraseña</label><input id="registroPassword" type="password" minlength="6" class="form-control" required aria-describedby="ayudaPassword"><div id="ayudaPassword" class="form-text">Mínimo 6 caracteres.</div></div>
                 <button class="btn btn-success w-100" type="submit">Crear cuenta</button>
               </form>
             </div>
@@ -683,11 +788,18 @@
       document.getElementById('badgeCarrito').textContent = total;
     }
 
-    function mostrarMensaje(texto, tipo = 'info') {
+    // accion (opcional): { texto, fn } muestra un botón dentro del mensaje, p. ej. "Deshacer" (Heurística 3)
+    function mostrarMensaje(texto, tipo = 'info', accion = null, duracion = 3000) {
       const mensaje = document.getElementById('mensajeSistema');
       mensaje.className = `alert alert-${tipo} shadow`; mensaje.textContent = texto; mensaje.style.display = 'block';
+      if (accion) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn btn-sm btn-dark ms-3 fw-semibold'; b.textContent = accion.texto;
+        b.onclick = () => { mensaje.style.display = 'none'; accion.fn(); };
+        mensaje.appendChild(b);
+      }
       clearTimeout(window.temporizadorMensaje);
-      window.temporizadorMensaje = setTimeout(() => mensaje.style.display = 'none', 3000);
+      window.temporizadorMensaje = setTimeout(() => mensaje.style.display = 'none', duracion);
     }
 
     function cambiarCantidadProducto(id, cambio) {
@@ -740,6 +852,7 @@
 
     function renderizarCarrito() {
       const carrito = obtenerCarrito();
+      if (!carrito.length && $('confirmarVaciar')) cancelarVaciarCarrito();
       const contenedor = document.getElementById('contenidoCarrito');
       const subtotalElemento = document.getElementById('subtotalCarrito');
       const costoEnvioElemento = document.getElementById('costoEnvioCarrito');
@@ -798,8 +911,31 @@
       if (carrito[index].cantidad <= 0) carrito.splice(index, 1);
       guardarCarrito(carrito); renderizarCarrito();
     }
-    function eliminarDelCarrito(index) { const c = obtenerCarrito(); c.splice(index, 1); guardarCarrito(c); renderizarCarrito(); }
+    // Heurística 3 (Control y libertad): quitar productos se puede deshacer durante unos segundos.
+    function restaurarCarrito(copia, texto) { guardarCarrito(copia); renderizarCarrito(); mostrarMensaje(texto, 'success'); }
+    function eliminarDelCarrito(index) {
+      const c = obtenerCarrito(), copia = c.map(x => ({ ...x })), [quitado] = c.splice(index, 1);
+      guardarCarrito(c); renderizarCarrito();
+      mostrarMensaje(`Quitaste "${quitado?.nombre || 'el producto'}" del carrito.`, 'info',
+        { texto: '↶ Deshacer', fn: () => restaurarCarrito(copia, 'Producto devuelto al carrito.') }, 7000);
+    }
+    // Uso interno (después de pagar): vacía sin preguntar
     function vaciarCarrito() { localStorage.removeItem(claveCarrito()); actualizarBadge(); renderizarCarrito(); }
+    // Heurística 5 (Prevención de errores): el botón "Vaciar carrito" pide confirmación y además se puede deshacer
+    function pedirVaciarCarrito() {
+      const c = obtenerCarrito();
+      if (!c.length) return mostrarMensaje('Tu carrito ya está vacío.', 'info');
+      const piezas = c.reduce((s, x) => s + x.cantidad, 0);
+      $('textoVaciarCarrito').textContent = `Se quitarán ${c.length} producto(s) (${piezas} pieza(s)) de tu carrito.`;
+      $('confirmarVaciar').classList.remove('d-none'); $('btnVaciarCarrito').classList.add('d-none');
+      $('btnConfirmarVaciar').focus();
+    }
+    function cancelarVaciarCarrito() { $('confirmarVaciar').classList.add('d-none'); $('btnVaciarCarrito').classList.remove('d-none'); }
+    function confirmarVaciarCarrito() {
+      const copia = obtenerCarrito().map(x => ({ ...x }));
+      cancelarVaciarCarrito(); vaciarCarrito();
+      mostrarMensaje('Vaciaste tu carrito.', 'info', { texto: '↶ Deshacer', fn: () => restaurarCarrito(copia, 'Recuperamos tu carrito.') }, 8000);
+    }
 
     function claveEnvio() {
       const usuario = obtenerUsuarioActual();
@@ -848,7 +984,7 @@
         }
       } catch (err) {
         if (id !== consultaEnvioId) return;
-        estilo('bg-danger text-white', '❌ No se pudo calcular el envío. ¿Está encendido el servidor (node server.js)?');
+        estilo('bg-danger text-white', '❌ No pudimos calcular el envío. Revisa tu conexión a internet e inténtalo de nuevo.');
       }
       renderizarCarrito();
     }
@@ -957,7 +1093,7 @@
         vaciarCarrito();
         setTimeout(() => mostrarRecibo(datos), 400);
       } catch (err) {
-        mostrarError('No se pudo contactar al servidor. Verifica que esté encendido (node server.js).');
+        mostrarError('No pudimos procesar tu pago por un problema de conexión. No se hizo ningún cargo: revisa tu internet e inténtalo de nuevo.');
       } finally {
         btn.disabled = false; btn.textContent = 'Confirmar y Pagar';
       }
@@ -990,7 +1126,7 @@
       if (!usuario) return mostrarMensaje('Inicia sesión para ver tus pedidos.', 'warning');
       const lista = $('listaPedidos');
       lista.innerHTML = '<p class="text-muted text-center py-3">Cargando…</p>';
-      new bootstrap.Modal($('pedidosModal')).show();
+      bootstrap.Modal.getOrCreateInstance($('pedidosModal')).show();
       try {
         const resp = await fetch(`${API_BASE}/api/pedidos`, { headers: await encabezadosAuth() });
         const pedidos = await resp.json();
@@ -1006,11 +1142,45 @@
               <li class="list-group-item d-flex justify-content-between"><span>Envío a ${escapeHTML(p.EstadoEnvio)} (C.P. ${escapeHTML(p.CodigoPostal)})</span><span>${p.CostoEnvio ? dinero(p.CostoEnvio) : 'Gratis'}</span></li>
               <li class="list-group-item d-flex justify-content-between fw-bold"><span>Total</span><span>${dinero(p.Total)}</span></li>
             </ul>
+            ${p.Estado === 'Pagado' ? `<div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2" id="cancelar-${escapeHTML(p.Folio)}">
+              <span class="small text-muted">Puedes cancelarlo mientras no se haya enviado.</span>
+              <button type="button" class="btn btn-sm btn-outline-danger" data-cancelar="${escapeHTML(p.Folio)}">Cancelar pedido</button>
+            </div>` : p.Estado === 'Enviado' ? '<div class="card-footer small text-muted">Tu pedido ya va en camino, por eso ya no se puede cancelar.</div>' : ''}
           </div>`).join('') : '<p class="text-muted text-center py-3">Aún no has realizado pedidos.</p>';
       } catch (err) {
-        lista.innerHTML = '<div class="alert alert-danger">No se pudieron cargar tus pedidos. Verifica que el servidor esté encendido.</div>';
+        lista.innerHTML = `<div class="alert alert-danger d-flex justify-content-between align-items-center gap-2"><span>No pudimos cargar tus pedidos. Revisa tu conexión a internet.</span><button class="btn btn-sm btn-outline-danger" onclick="abrirMisPedidos()">Reintentar</button></div>`;
       }
     }
+
+    // Heurística 3 (Control y libertad) + Heurística 5 (Prevención de errores):
+    // el cliente puede cancelar un pedido "Pagado" (aún no enviado), con confirmación explícita.
+    document.addEventListener('click', async e => {
+      const b = e.target.closest('[data-cancelar], [data-confirmar-cancelar], [data-no-cancelar]');
+      if (!b) return;
+      const folio = b.dataset.cancelar || b.dataset.confirmarCancelar || b.dataset.noCancelar, caja = document.getElementById('cancelar-' + folio);
+      if (!caja) return;
+      if (b.dataset.cancelar) {
+        caja.className = 'card-footer bg-warning-subtle';
+        caja.innerHTML = `<div class="fw-semibold mb-1">¿Cancelar el pedido ${escapeHTML(folio)}?</div>
+          <div class="small mb-2">Esta acción no se puede deshacer. Te enviaremos un correo de confirmación.</div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-no-cancelar="${escapeHTML(folio)}">No, conservarlo</button>
+            <button type="button" class="btn btn-sm btn-danger" data-confirmar-cancelar="${escapeHTML(folio)}">Sí, cancelar pedido</button>
+          </div>`;
+        return;
+      }
+      if (b.dataset.noCancelar) return abrirMisPedidos();
+      b.disabled = true; b.textContent = 'Cancelando…';
+      try {
+        const r = await fetch(`${API_BASE}/api/pedidos/${encodeURIComponent(folio)}/cancelar`, { method: 'POST', headers: await encabezadosAuth() });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'No pudimos cancelar el pedido. Inténtalo de nuevo.');
+        mostrarMensaje(`Tu pedido ${folio} fue cancelado. Te enviamos la confirmación por correo.`, 'success', null, 5000);
+      } catch (err) {
+        mostrarMensaje(err.message === 'Failed to fetch' ? 'No pudimos conectar con la tienda. Revisa tu internet e inténtalo de nuevo.' : err.message, 'danger', null, 6000);
+      }
+      abrirMisPedidos();
+    });
 
     const POR_PAGINA = 24;
     const BUSQUEDAS_POPULARES = ['Samsung', 'Apple', '4K Ultra HD', 'Televisores', 'Cómputo', 'Inverter'];
@@ -1032,7 +1202,7 @@
       } catch (err) {
         console.warn('No se pudo leer SQL Server, usando datos de respaldo:', err);
         DATOS_PRODUCTOS = generar500Productos().map(p => ({ ...p, img: IMAGENES[p.i % IMAGENES.length] }));
-        mostrarMensaje('Sin conexión a la base de datos. Mostrando catálogo de respaldo.', 'warning');
+        mostrarMensaje('No pudimos cargar el catálogo actualizado. Te mostramos una versión de ejemplo; recarga la página en unos momentos.', 'warning');
       }
       PRODUCTOS = DATOS_PRODUCTOS.map((p) => ({
         ...p,
@@ -1355,7 +1525,7 @@
           ? datos.map(x => `<div class="border rounded p-3 mb-2"><div class="d-flex justify-content-between"><strong>${escapeHTML(x.usuario)}</strong><span class="estrellas">${estrellas(x.calificacion)}</span></div><p class="mb-0 mt-2">${escapeHTML(x.comentario)}</p></div>`).join('')
           : '<p class="text-muted">Todavía no hay reseñas para este producto.</p>';
       } catch (err) {
-        caja.innerHTML = '<div class="alert alert-danger">No se pudieron cargar las reseñas. Verifica que el servidor esté encendido.</div>';
+        caja.innerHTML = '<div class="alert alert-danger">No pudimos cargar las reseñas. Revisa tu conexión a internet e inténtalo de nuevo.</div>';
       }
     }
 
@@ -1389,7 +1559,7 @@
         mostrarMensaje('¡Gracias! Tu reseña fue publicada.', 'success');
         await cargarResumenResenas(); actualizarResumenesEnPantalla(); await cargarListaResenas(productoResenaActual);
       } catch (err) {
-        error.textContent = 'No se pudo contactar al servidor. Verifica que esté encendido.'; error.classList.remove('d-none');
+        error.textContent = 'No pudimos publicar tu reseña por un problema de conexión. Inténtalo de nuevo.'; error.classList.remove('d-none');
       } finally { btn.disabled = !obtenerUsuarioActual(); }
     }
 
@@ -1443,7 +1613,7 @@
         if (!sb) return mostrarMensaje('No se pudo conectar con el sistema de cuentas. Recarga la página.', 'danger');
         if (password.length < 6) return mostrarMensaje('La contraseña debe tener al menos 6 caracteres.', 'warning');
         const { data, error } = await sb.auth.signUp({ email: correo, password, options: { data: { nombre } } });
-        if (error) return mostrarMensaje(/registered|already/i.test(error.message) ? 'Ya existe una cuenta registrada con ese correo.' : `No se pudo crear la cuenta: ${error.message}`, 'warning');
+        if (error) return mostrarMensaje(/registered|already/i.test(error.message) ? 'Ya existe una cuenta registrada con ese correo. Inicia sesión en la pestaña "Iniciar sesión".' : /password/i.test(error.message) ? 'La contraseña no es válida. Usa al menos 6 caracteres.' : /email/i.test(error.message) ? 'Revisa que el correo esté bien escrito (ejemplo: nombre@gmail.com).' : 'No pudimos crear la cuenta. Inténtalo de nuevo en unos momentos.', 'warning');
         if (!data.session) return mostrarMensaje('Cuenta creada. Revisa tu correo para confirmarla e inicia sesión.', 'info');
         usuarioCache = aUsuario(data.session);
         actualizarZonaUsuario(); actualizarBadge();

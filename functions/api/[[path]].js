@@ -137,6 +137,20 @@ async function misPedidos(env, usuario) {
   })));
 }
 
+// Cancelación por el cliente: solo su propio pedido y solo mientras siga "Pagado" (aún no enviado)
+async function cancelarMiPedido(env, folio, usuario) {
+  const [p] = await db(env, `pedidos?folio=eq.${encodeURIComponent(folio)}&usuario_id=eq.${usuario.id}&select=id,estado`);
+  if (!p) return error(404, 'No encontramos ese pedido en tu cuenta.');
+  if (p.estado === 'Cancelado') return error(409, 'Este pedido ya estaba cancelado.');
+  if (p.estado !== 'Pagado') return error(409, `Tu pedido ya está "${p.estado}", por eso ya no se puede cancelar.`);
+  // El filtro estado=eq.Pagado evita cancelar si el administrador lo envió en ese mismo instante
+  const act = await db(env, `pedidos?id=eq.${p.id}&estado=eq.Pagado&select=id`, { metodo: 'PATCH', prefer: 'return=representation', cuerpo: { estado: 'Cancelado' } });
+  if (!act.length) return error(409, 'Tu pedido acaba de cambiar de estado y ya no se puede cancelar. Revisa "Mis pedidos".');
+  let correo = 'registrado';
+  try { await notificarPedido(env, p.id); } catch (e) { console.error('Correo no registrado:', e.message); correo = 'no registrado'; }
+  return json({ folio, estado: 'Cancelado', correo });
+}
+
 // ---------- Reseñas ----------
 async function resumenResenas(env) {
   try { return json(await rpc(env, 'resumen_resenas')); }
@@ -288,7 +302,8 @@ export async function onRequest(context) {
     if (m === 'GET' && ruta === '/api/resenas') return await listaResenas(env, url);
 
     // Con sesión
-    const requiereSesion = ['/api/pedidos', '/api/resenas'].includes(ruta) && m === 'POST' || (ruta === '/api/pedidos' && m === 'GET');
+    const cancelar = m === 'POST' && /^\/api\/pedidos\/([^/]+)\/cancelar$/.exec(ruta);
+    const requiereSesion = ['/api/pedidos', '/api/resenas'].includes(ruta) && m === 'POST' || (ruta === '/api/pedidos' && m === 'GET') || !!cancelar;
     const esAdmin = ruta.startsWith('/api/admin/');
     if (requiereSesion || esAdmin) {
       const usuario = await usuarioDeSolicitud(env, request);
@@ -300,6 +315,7 @@ export async function onRequest(context) {
         const est = /^\/api\/admin\/pedidos\/([^/]+)\/estado$/.exec(ruta);
         if (est && (m === 'POST' || m === 'PATCH')) return await cambiarEstado(env, request, decodeURIComponent(est[1]));
       } else {
+        if (cancelar) return await cancelarMiPedido(env, decodeURIComponent(cancelar[1]), usuario);
         if (ruta === '/api/pedidos' && m === 'POST') return await crearPedido(env, request, context, usuario);
         if (ruta === '/api/pedidos' && m === 'GET') return await misPedidos(env, usuario);
         if (ruta === '/api/resenas' && m === 'POST') return await publicarResena(env, request, usuario);
