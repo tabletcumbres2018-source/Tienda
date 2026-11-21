@@ -44,3 +44,16 @@ export async function usuarioDeSolicitud(env, request) {
     rol: u.app_metadata?.rol || null        // app_metadata solo lo puede cambiar el servidor (nunca el usuario)
   };
 }
+
+// Lee TODAS las filas de una consulta (Supabase devuelve como máximo 1000 por petición).
+export async function dbTodo(env, ruta, tam = 1000) {
+  const filas = [];
+  for (let desde = 0; ; desde += tam) {
+    const pagina = await db(env, `${ruta}${ruta.includes('?') ? '&' : '?'}limit=${tam}&offset=${desde}`);
+    filas.push(...pagina);
+    if (pagina.length < tam) return filas;
+  }
+}
+
+// true si el error es "la función RPC no existe en la base" (PostgREST PGRST202)
+export const faltaFuncion = e => e instanceof ErrorDB && (e.codigo === 'PGRST202' || e.status === 404);

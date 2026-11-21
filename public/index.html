@@ -640,7 +640,8 @@
 
     // ---- Sesión con Supabase Auth (las cuentas y contraseñas viven en Supabase, cifradas) ----
     let sb = null, usuarioCache = null;
-    const aUsuario = s => s?.user ? { nombre: String(s.user.user_metadata?.nombre || s.user.email.split('@')[0]).trim(), correo: s.user.email.toLowerCase() } : null;
+    // esAdmin solo decide si se muestra el acceso al panel; el servidor vuelve a verificar el rol en cada petición.
+    const aUsuario = s => s?.user ? { nombre: String(s.user.user_metadata?.nombre || s.user.email.split('@')[0]).trim(), correo: s.user.email.toLowerCase(), esAdmin: s.user.app_metadata?.rol === 'admin' } : null;
     async function iniciarAuth() {
       try {
         const cfg = await (await fetch(`${API_BASE}/api/config`)).json();
@@ -668,7 +669,7 @@
       const zona = document.getElementById('zonaUsuario');
       const usuario = obtenerUsuarioActual();
       zona.innerHTML = usuario
-        ? `<div class="dropdown"><button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">👤 ${escapeHTML(usuario.nombre)}</button><ul class="dropdown-menu dropdown-menu-end"><li><span class="dropdown-item-text small">${escapeHTML(usuario.correo)}</span></li><li><button class="dropdown-item" onclick="abrirMisPedidos()">📦 Mis pedidos</button></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" onclick="cerrarSesion()">Cerrar sesión</button></li></ul></div>`
+        ? `<div class="dropdown"><button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">👤 ${escapeHTML(usuario.nombre)}</button><ul class="dropdown-menu dropdown-menu-end"><li><span class="dropdown-item-text small">${escapeHTML(usuario.correo)}</span></li><li><button class="dropdown-item" onclick="abrirMisPedidos()">📦 Mis pedidos</button></li>${usuario.esAdmin ? '<li><a class="dropdown-item fw-semibold" href="/admin/">📊 Panel de administrador (KPIs)</a></li>' : ''}<li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" onclick="cerrarSesion()">Cerrar sesión</button></li></ul></div>`
         : `<button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#cuentaModal">👤 Iniciar sesión</button>`;
     }
     function escapeHTML(valor) {
@@ -979,7 +980,8 @@
           <li class="list-group-item d-flex justify-content-between"><span>Envío a ${escapeHTML(d.estadoEnvio)}</span><span>${d.costoEnvio ? dinero(d.costoEnvio) : 'Gratis'}</span></li>
           <li class="list-group-item d-flex justify-content-between fw-bold"><span>Total pagado</span><span class="text-success">${dinero(d.total)}</span></li>
           <li class="list-group-item small text-muted">Referencia de pago (sandbox): ${escapeHTML(d.pagoReferencia)}</li>
-        </ul>`;
+        </ul>
+        ${d.correo ? `<div class="alert alert-info small mt-3 mb-0">📧 Te enviamos la confirmación de compra a <strong>${escapeHTML(d.correo)}</strong>. Si no la ves, revisa tu carpeta de spam.</div>` : ''}`;
       new bootstrap.Modal($('reciboModal')).show();
     }
 

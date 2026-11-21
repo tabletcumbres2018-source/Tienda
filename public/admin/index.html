@@ -117,6 +117,7 @@
         <div class="sub" id="actualizado"></div>
       </div>
       <div class="acciones">
+        <a class="btn ghost" href="/" style="text-decoration:none">← Tienda</a>
         <button class="btn ghost" id="btnRefrescar" type="button">↻ Actualizar</button>
         <button class="btn ghost" id="btnSalir" type="button">Salir</button>
       </div>
@@ -138,7 +139,7 @@
           <tbody id="tbPedidos"></tbody>
         </table>
       </div>
-      <p class="sub">Al cambiar el estado se registra un correo para el cliente. En modo local el correo se simula; en el servidor real se envía.</p>
+      <p class="sub">Al cambiar el estado se registra un correo para el cliente. Si el proveedor de correo no está configurado en Cloudflare, el correo aparece como "Simulado" (ábrelo con ▸ para ver el resultado).</p>
     </section>
   </div>
 </div>
@@ -205,12 +206,20 @@
 
   async function cargar() {
     const [k, pedidos] = await Promise.all([api('/api/admin/kpis'), api('/api/admin/pedidos')]);
+    const variacion = k.variacionMes == null ? 'Sin ventas el mes anterior'
+      : `${k.variacionMes >= 0 ? '▲' : '▼'} ${Math.abs(k.variacionMes * 100).toFixed(1)}% vs. mes anterior (${mxn(k.ventasMesAnterior)})`;
+    const c = k.correos || { enviados: 0, simulados: 0, errores: 0 };
     $('kpis').innerHTML =
       tile('Ventas totales', mxn(k.ventasTotales), 'Sin pedidos cancelados', true) +
-      tile('Pedidos', k.pedidos) +
+      tile('Ventas de hoy', mxn(k.ventasHoy ?? 0), `${k.pedidosHoy ?? 0} pedido(s) hoy`) +
+      tile('Ventas del mes', mxn(k.ventasMes ?? 0), variacion) +
+      tile('Pedidos', k.pedidos, k.cancelados ? `${k.cancelados} cancelado(s) aparte` : '') +
       tile('Ticket promedio', mxn(k.ticketPromedio)) +
+      tile('Unidades vendidas', k.unidades ?? 0) +
+      tile('Clientes que compraron', k.clientes ?? 0) +
       tile('Producto más vendido', k.productoTop ? esc(k.productoTop.nombre) : '—', k.productoTop ? `${k.productoTop.unidades} unidad(es)` : '', false, true) +
-      tile('Por enviar', k.porEnviar, 'Pedidos pagados sin enviar');
+      tile('Por enviar', k.porEnviar, 'Pedidos pagados sin enviar') +
+      tile('Correos enviados', c.enviados, `${c.simulados} simulado(s) · ${c.errores} con error`);
 
     $('chCategoria').innerHTML = barras(
       k.porCategoria.map(c => ({ nombre: c.categoria, valor: c.ventas, tip: `${c.categoria}: ${mxn(c.ventas)} · ${c.unidades} unidad(es)` })), mxn);

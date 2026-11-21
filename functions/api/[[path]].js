@@ -1,11 +1,11 @@
 // API de LocalStorage en Cloudflare Pages Functions + Supabase (reemplaza a server.js).
 // Todas las rutas /api/... entran por aquí. Variables de entorno (Cloudflare → Settings → Variables and Secrets):
 //   SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY (secreto), ORIGEN_ESTADO,
-//   EMAIL_API_KEY (secreto, opcional), EMAIL_FROM (opcional)
+//   BREVO_API_KEY o EMAIL_API_KEY (secreto, para enviar correos), EMAIL_FROM (remitente)
 import { calcularEnvio } from '../_lib/envio.js';
 import { procesarPago } from '../_lib/pagos.js';
 import { construirCorreo, enviarCorreo, ESTADOS_VALIDOS } from '../_lib/correo.js';
-import { db, rpc, usuarioDeSolicitud, ErrorDB } from '../_lib/supabase.js';
+import { db, dbTodo, rpc, usuarioDeSolicitud, ErrorDB, faltaFuncion } from '../_lib/supabase.js';
 
 const json = (datos, status = 200) => new Response(JSON.stringify(datos), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
@@ -76,8 +76,9 @@ async function crearPedido(env, request, ctx, usuario) {
 
   // Precios SIEMPRE desde la base (el navegador solo manda ids y cantidades)
   const ids = [...new Set(partidas.map(p => p.id))];
-  const cat = await db(env, `productos?id=in.(${ids.join(',')})&select=id,precio`);
+  const cat = await db(env, `productos?id=in.(${ids.join(',')})&select=id,precio,titulo`);
   const precios = Object.fromEntries(cat.map(p => [p.id, Number(p.precio)]));
+  const titulos = Object.fromEntries(cat.map(p => [p.id, p.titulo]));
   if (ids.some(id => precios[id] === undefined)) return error(400, 'Un producto del carrito ya no existe.');
   const total = partidas.reduce((s, p) => s + precios[p.id] * p.cantidad, 0) + envio.costo;
 
@@ -85,22 +86,45 @@ async function crearPedido(env, request, ctx, usuario) {
   const pago = procesarPago(tarjeta || {}, total);
   if (!pago.aprobado) return error(402, pago.motivo, { pagoRechazado: true });
 
+  const datos = {
+    usuario_id: usuario.id, nombre: usuario.nombre, correo: usuario.correo,
+    direccion: String(direccion).trim().slice(0, 300), referencias: String(referencias).trim().slice(0, 500),
+    cp: envio.cp, estado_envio: envio.estado, distancia_km: envio.distanciaKm, costo_envio: envio.costo,
+    metodo_pago: `Tarjeta ${pago.marca} (sandbox)`, pago_referencia: pago.referencia, ultimos4: pago.ultimos4, items: partidas
+  };
   let ped;
   try {
-    ped = await rpc(env, 'crear_pedido', { p: {
-      usuario_id: usuario.id, nombre: usuario.nombre, correo: usuario.correo,
-      direccion: String(direccion).trim().slice(0, 300), referencias: String(referencias).trim().slice(0, 500),
-      cp: envio.cp, estado_envio: envio.estado, distancia_km: envio.distanciaKm, costo_envio: envio.costo,
-      metodo_pago: `Tarjeta ${pago.marca} (sandbox)`, pago_referencia: pago.referencia, ultimos4: pago.ultimos4, items: partidas
-    } });
+    ped = await rpc(env, 'crear_pedido', { p: datos });
   } catch (e) {
     if (e instanceof ErrorDB && /producto_inexistente|carrito_vacio/.test(e.message)) return error(400, 'Un producto del carrito ya no existe.');
-    throw e;
+    if (!faltaFuncion(e)) throw e;
+    ped = await crearPedidoDirecto(env, datos, precios, titulos);   // la función SQL no existe: se guarda por la API REST
   }
   // El correo no bloquea la compra
   ctx.waitUntil(notificarPedido(env, ped.id).catch(e => console.error('Correo no registrado:', e.message)));
   return json({ folio: ped.folio, estado: 'Pagado', fecha: ped.creado_en, subtotal: ped.subtotal, costoEnvio: ped.costo_envio,
-                total: ped.total, estadoEnvio: envio.estado, pagoReferencia: pago.referencia }, 201);
+                total: ped.total, estadoEnvio: envio.estado, pagoReferencia: pago.referencia, correo: usuario.correo }, 201);
+}
+
+// Respaldo si en Supabase no existe la función crear_pedido(): pedido + detalle por REST (si falla el detalle, se borra el pedido)
+async function crearPedidoDirecto(env, d, precios, titulos) {
+  const subtotal = d.items.reduce((s, i) => s + precios[i.id] * i.cantidad, 0);
+  const [ped] = await db(env, 'pedidos?select=id,folio,creado_en,subtotal,costo_envio,total', {
+    metodo: 'POST', prefer: 'return=representation',
+    cuerpo: {
+      usuario_id: d.usuario_id, cliente_nombre: d.nombre, cliente_correo: d.correo, direccion: d.direccion, referencias: d.referencias,
+      codigo_postal: d.cp, estado_envio: d.estado_envio, distancia_km: d.distancia_km, subtotal, costo_envio: d.costo_envio,
+      total: subtotal + d.costo_envio, estado: 'Pagado', metodo_pago: d.metodo_pago, pago_referencia: d.pago_referencia, tarjeta_ultimos4: d.ultimos4
+    }
+  });
+  try {
+    await db(env, 'detalle_pedido', { metodo: 'POST', prefer: 'return=minimal',
+      cuerpo: d.items.map(i => ({ pedido_id: ped.id, producto_id: i.id, producto: titulos[i.id], color: i.color, cantidad: i.cantidad, precio_unitario: precios[i.id] })) });
+  } catch (e) {
+    await db(env, `pedidos?id=eq.${ped.id}`, { metodo: 'DELETE' }).catch(() => {});
+    throw e;
+  }
+  return ped;
 }
 
 async function misPedidos(env, usuario) {
@@ -114,6 +138,16 @@ async function misPedidos(env, usuario) {
 }
 
 // ---------- Reseñas ----------
+async function resumenResenas(env) {
+  try { return json(await rpc(env, 'resumen_resenas')); }
+  catch (e) {
+    if (!faltaFuncion(e)) throw e;
+    const filas = await dbTodo(env, 'resenas?select=producto_id,calificacion&order=id.asc');
+    const r = {};
+    for (const x of filas) { const a = r[x.producto_id] ||= { s: 0, n: 0 }; a.s += x.calificacion; a.n++; }
+    return json(Object.fromEntries(Object.entries(r).map(([id, a]) => [id, { n: a.n, promedio: Math.round(a.s / a.n * 10) / 10 }])));
+  }
+}
 async function listaResenas(env, url) {
   const id = parseInt(url.searchParams.get('producto'), 10);
   if (!Number.isInteger(id) || id < 1) return error(400, 'Producto no válido.');
@@ -139,6 +173,56 @@ async function publicarResena(env, request, usuario) {
 }
 
 // ---------- Panel admin (usuario con app_metadata.rol = "admin") ----------
+// KPIs calculados aquí con los datos de Supabase (no depende de funciones SQL). Fechas en hora de la Ciudad de México.
+const diaMx = f => new Date(f).toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });   // "2026-11-21"
+async function kpisAdmin(env) {
+  const [pedidos, detalle, correos] = await Promise.all([
+    dbTodo(env, 'pedidos?select=id,estado,total,costo_envio,creado_en,usuario_id&order=id.asc'),
+    dbTodo(env, 'detalle_pedido?select=pedido_id,producto_id,producto,cantidad,precio_unitario,productos(categoria)&order=id.asc'),
+    dbTodo(env, 'correos_pedido?select=resultado&order=id.asc')
+  ]);
+  const validos = pedidos.filter(p => p.estado !== 'Cancelado');
+  const idsValidos = new Set(validos.map(p => p.id));
+  const det = detalle.filter(d => idsValidos.has(d.pedido_id));
+  const suma = (arr, f) => arr.reduce((s, x) => s + Number(f(x) || 0), 0);
+
+  const ventasTotales = suma(validos, p => p.total);
+  const hoy = diaMx(new Date()), mes = hoy.slice(0, 7);
+  const ant = new Date(hoy + 'T12:00:00Z'); ant.setUTCDate(1); ant.setUTCMonth(ant.getUTCMonth() - 1);
+  const mesAnterior = ant.toISOString().slice(0, 7);
+  const deDia = validos.map(p => ({ ...p, dia: diaMx(p.creado_en) }));
+  const ventasMes = suma(deDia.filter(p => p.dia.startsWith(mes)), p => p.total);
+  const ventasMesAnterior = suma(deDia.filter(p => p.dia.startsWith(mesAnterior)), p => p.total);
+
+  const porProducto = {}, porCat = {};
+  for (const d of det) {
+    const pr = porProducto[d.producto_id] ||= { nombre: d.producto, unidades: 0 }; pr.unidades += d.cantidad;
+    const cat = d.productos?.categoria || 'Sin categoría';
+    const c = porCat[cat] ||= { categoria: cat, ventas: 0, unidades: 0 };
+    c.ventas += d.cantidad * Number(d.precio_unitario); c.unidades += d.cantidad;
+  }
+  const productoTop = Object.values(porProducto).sort((a, b) => b.unidades - a.unidades || a.nombre.localeCompare(b.nombre, 'es'))[0] || null;
+
+  const porEstado = Object.entries(pedidos.reduce((m, p) => (m[p.estado] = (m[p.estado] || 0) + 1, m), {})).map(([estado, n]) => ({ estado, pedidos: n }));
+  const desde = new Date(); desde.setDate(desde.getDate() - 29); const limite = diaMx(desde);
+  const dias = {};
+  for (const p of deDia) if (p.dia >= limite) { const x = dias[p.dia] ||= { dia: p.dia, ventas: 0, pedidos: 0 }; x.ventas += Number(p.total); x.pedidos++; }
+  const correosCuenta = correos.reduce((m, c) => (m[c.resultado] = (m[c.resultado] || 0) + 1, m), {});
+
+  return json({
+    ventasTotales, pedidos: validos.length, ticketPromedio: validos.length ? ventasTotales / validos.length : 0,
+    ingresoEnvios: suma(validos, p => p.costo_envio),
+    productoTop, porEnviar: pedidos.filter(p => p.estado === 'Pagado').length,
+    ventasHoy: suma(deDia.filter(p => p.dia === hoy), p => p.total), pedidosHoy: deDia.filter(p => p.dia === hoy).length,
+    ventasMes, ventasMesAnterior, variacionMes: ventasMesAnterior ? (ventasMes - ventasMesAnterior) / ventasMesAnterior : null,
+    unidades: suma(det, d => d.cantidad), clientes: new Set(validos.map(p => p.usuario_id)).size,
+    cancelados: pedidos.length - validos.length,
+    correos: { enviados: correosCuenta.Enviado || 0, simulados: correosCuenta.Simulado || 0, errores: correosCuenta.Error || 0 },
+    porCategoria: Object.values(porCat).sort((a, b) => b.ventas - a.ventas),
+    porEstado, porDia: Object.values(dias).sort((a, b) => a.dia.localeCompare(b.dia))
+  });
+}
+
 async function adminPedidos(env) {
   const filas = await db(env, 'pedidos?select=*,detalle_pedido(producto,color,cantidad,precio_unitario),correos_pedido(asunto,resultado,creado_en)&order=creado_en.desc&limit=200');
   return json(filas.map(p => ({
@@ -149,13 +233,26 @@ async function adminPedidos(env) {
   })));
 }
 
+const TRANSICIONES = { Pendiente: ['Pagado', 'Cancelado'], Pagado: ['Enviado', 'Cancelado'], Enviado: ['Entregado', 'Cancelado'], Entregado: [], Cancelado: [] };
+
 async function cambiarEstado(env, request, folio) {
   const b = await request.json().catch(() => ({}));
   const nuevo = String(b.estado || '');
   if (!ESTADOS_VALIDOS.includes(nuevo)) return error(400, 'Estado no válido.');
   let r;
   try {
-    r = await rpc(env, 'cambiar_estado_pedido', { p_folio: folio, p_estado: nuevo });
+    try {
+      r = await rpc(env, 'cambiar_estado_pedido', { p_folio: folio, p_estado: nuevo });
+    } catch (e) {
+      if (!faltaFuncion(e)) throw e;
+      // Respaldo si no existe la función SQL: mismo flujo de estados, por REST
+      const [p] = await db(env, `pedidos?folio=eq.${encodeURIComponent(folio)}&select=id,estado`);
+      if (!p) return error(404, 'Pedido no encontrado.');
+      if (!(TRANSICIONES[p.estado] || []).includes(nuevo)) return error(409, `No se puede pasar de "${p.estado}" a "${nuevo}".`);
+      const act = await db(env, `pedidos?id=eq.${p.id}&estado=eq.${encodeURIComponent(p.estado)}&select=id`, { metodo: 'PATCH', prefer: 'return=representation', cuerpo: { estado: nuevo } });
+      if (!act.length) return error(409, 'El pedido cambió mientras tanto. Actualiza e inténtalo de nuevo.');
+      r = { id: p.id };
+    }
   } catch (e) {
     if (e instanceof ErrorDB && e.codigo === 'P0002') return error(404, 'Pedido no encontrado.');
     const m = e instanceof ErrorDB && /^transicion_invalida:(.*):(.*)$/.exec(e.message);
@@ -187,7 +284,7 @@ export async function onRequest(context) {
       const r = calcularEnvio(url.searchParams.get('cp'), env.ORIGEN_ESTADO);
       return r.error ? json(r, 400) : json(r);
     }
-    if (m === 'GET' && ruta === '/api/resenas/resumen') return json(await rpc(env, 'resumen_resenas'));
+    if (m === 'GET' && ruta === '/api/resenas/resumen') return await resumenResenas(env);
     if (m === 'GET' && ruta === '/api/resenas') return await listaResenas(env, url);
 
     // Con sesión
@@ -198,7 +295,7 @@ export async function onRequest(context) {
       if (!usuario) return error(401, esAdmin ? 'Inicia sesión como administrador.' : 'Inicia sesión para continuar.');
       if (esAdmin) {
         if (usuario.rol !== 'admin') return error(403, 'Tu cuenta no tiene permisos de administrador.');
-        if (m === 'GET' && ruta === '/api/admin/kpis') return json(await rpc(env, 'kpis_admin'));
+        if (m === 'GET' && ruta === '/api/admin/kpis') return await kpisAdmin(env);
         if (m === 'GET' && ruta === '/api/admin/pedidos') return await adminPedidos(env);
         const est = /^\/api\/admin\/pedidos\/([^/]+)\/estado$/.exec(ruta);
         if (est && (m === 'POST' || m === 'PATCH')) return await cambiarEstado(env, request, decodeURIComponent(est[1]));
