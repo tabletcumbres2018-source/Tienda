@@ -177,6 +177,30 @@
     .ad-morado  { background: linear-gradient(135deg, #3f4718, #6b7730); }   /* oliva */
     .ad-verde   { background: linear-gradient(135deg, #1f4d2c, #3f7a3b); }   /* verde */
     .ad-naranja { background: linear-gradient(135deg, #6e4217, #9c6628); }   /* caramelo */
+
+    /* Columna de filtros fija al hacer scroll (debajo de la barra de navegación) */
+    :root { --alto-nav: 64px; }
+    @media (min-width: 992px) {
+      .filtros-sticky { position: sticky; top: calc(var(--alto-nav) + 1rem); max-height: calc(100vh - var(--alto-nav) - 2rem); overflow-y: auto; }
+      .filtros-sticky::-webkit-scrollbar { width: 6px; }
+      .filtros-sticky::-webkit-scrollbar-thumb { background: #c9b896; border-radius: 3px; }
+    }
+    @media (max-width: 991.98px) {
+      #panelFiltros { --bs-offcanvas-bg: var(--panel-2, #fff); }
+    }
+
+    /* Rango de precio: control deslizante de dos puntas */
+    .rango-precio { position: relative; height: 28px; }
+    .rango-pista { position: absolute; left: 0; right: 0; top: 50%; height: 6px; transform: translateY(-50%); background: #ddd2bd; border-radius: 3px; }
+    .rango-relleno { position: absolute; top: 0; bottom: 0; background: var(--verde, #2e6b3c); border-radius: 3px; }
+    .rango-precio input[type=range] { position: absolute; left: 0; top: 0; width: 100%; height: 28px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+    .rango-precio input[type=range]::-webkit-slider-runnable-track { background: none; height: 28px; }
+    .rango-precio input[type=range]::-moz-range-track { background: none; }
+    .rango-precio input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 18px; height: 18px; margin-top: 5px; border-radius: 50%; background: #fff; border: 3px solid var(--verde, #2e6b3c); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+    .rango-precio input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--verde, #2e6b3c); cursor: pointer; }
+    .rango-precio input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 .2rem rgba(46,107,60,.35); }
+    .rango-precio input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 .2rem rgba(46,107,60,.35); }
+    .rango-precio input[type=number]::-webkit-inner-spin-button { opacity: .5; }
   </style>
 </head>
 <body>
@@ -210,59 +234,88 @@
     <!-- Anuncios: carrusel de banners (se llena desde /api/anuncios) -->
     <div id="anunciosHero" class="mb-3 d-none"></div>
 
-    <!-- Heurística 7: Flexibilidad y eficiencia de uso (Filtros variados) -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3">
-            <label for="filtroCategoria" class="form-label">Categoría</label>
-            <select id="filtroCategoria" class="form-select"></select>
-          </div>
-          <div class="col-md-3">
-            <label for="filtroMarca" class="form-label">Marca</label>
-            <select id="filtroMarca" class="form-select"></select>
-          </div>
-          <div class="col-md-2">
-            <label for="filtroPrecio" class="form-label">Rango de precio</label>
-            <select id="filtroPrecio" class="form-select">
-              <option value="">Todos los precios</option>
-              <option value="0-3000">Hasta $3,000</option>
-              <option value="3001-8000">$3,001 - $8,000</option>
-              <option value="8001-15000">$8,001 - $15,000</option>
-              <option value="15001-999999">Más de $15,000</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label for="ordenProductos" class="form-label">Ordenar</label>
-            <select id="ordenProductos" class="form-select">
+    <div class="row g-4">
+      <!-- Heurística 7: Flexibilidad y eficiencia de uso (Filtros variados).
+           En pantallas grandes es una columna fija a la izquierda; en celular, un panel lateral (offcanvas). -->
+      <div class="col-lg-3">
+        <div class="filtros-sticky">
+          <aside class="offcanvas-lg offcanvas-start" tabindex="-1" id="panelFiltros" aria-labelledby="panelFiltrosLabel">
+            <div class="offcanvas-header">
+              <h5 class="offcanvas-title" id="panelFiltrosLabel">Filtros</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#panelFiltros" aria-label="Cerrar filtros"></button>
+            </div>
+            <div class="offcanvas-body">
+              <div class="card shadow-sm w-100 tarjeta-filtros">
+                <div class="card-body">
+                  <h2 class="h6 fw-bold mb-3 d-none d-lg-block">Filtros</h2>
+                  <div class="mb-3">
+                    <label for="filtroCategoria" class="form-label">Categoría</label>
+                    <select id="filtroCategoria" class="form-select"></select>
+                  </div>
+                  <div class="mb-3">
+                    <label for="filtroMarca" class="form-label">Marca</label>
+                    <select id="filtroMarca" class="form-select"></select>
+                  </div>
+                  <!-- Rango de precio libre: dos campos + control deslizante de dos puntas -->
+                  <fieldset class="mb-3">
+                    <legend class="form-label fs-6 mb-2">Rango de precio</legend>
+                    <div class="rango-precio mb-2" id="rangoPrecio">
+                      <div class="rango-pista"><div class="rango-relleno" id="rangoRelleno"></div></div>
+                      <input type="range" id="precioMinRange" aria-label="Precio mínimo">
+                      <input type="range" id="precioMaxRange" aria-label="Precio máximo">
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input id="precioMin" type="number" class="form-control" inputmode="numeric" min="0" aria-label="Precio mínimo en pesos" placeholder="Mín.">
+                      </div>
+                      <span class="text-muted">–</span>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input id="precioMax" type="number" class="form-control" inputmode="numeric" min="0" aria-label="Precio máximo en pesos" placeholder="Máx.">
+                      </div>
+                    </div>
+                    <div class="form-text" id="ayudaPrecio"></div>
+                  </fieldset>
+                  <!-- Heurística 3: Control y libertad del usuario -->
+                  <button type="button" class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">Limpiar filtros</button>
+                  <button type="button" class="btn btn-success w-100 mt-2 d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#panelFiltros" id="btnVerResultados">Ver resultados</button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="col-lg-9">
+        <!-- Feedback de resultados + ordenar -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <div id="resumenResultados" class="fw-semibold" aria-live="polite"></div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#panelFiltros" aria-controls="panelFiltros">
+              ☰ Filtros <span id="contadorFiltros" class="badge rounded-pill bg-success d-none"></span>
+            </button>
+            <label for="ordenProductos" class="small text-muted mb-0 d-none d-sm-inline">Ordenar</label>
+            <select id="ordenProductos" class="form-select form-select-sm w-auto" aria-label="Ordenar productos">
               <option value="relevancia">Relevancia / original</option>
               <option value="precio-asc">Precio: menor a mayor</option>
               <option value="precio-desc">Precio: mayor a menor</option>
               <option value="nombre">Nombre: A-Z</option>
             </select>
           </div>
-          <!-- Heurística 3: Control y libertad del usuario -->
-          <div class="col-md-2">
-            <button type="button" class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">Limpiar filtros</button>
-          </div>
+        </div>
+        <div id="chipsFiltros" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+        <!-- Heurística 9: Ayuda en manejo de errores y sin resultados -->
+        <div id="sinResultados" class="text-center d-none" role="status"></div>
+
+        <!-- Grilla de Productos -->
+        <div id="productos" class="row g-4"></div>
+
+        <div class="text-center my-4">
+          <button id="btnMas" type="button" class="btn btn-outline-primary d-none"></button>
         </div>
       </div>
-    </div>
-
-    <!-- Feedback de resultados -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-      <div id="resumenResultados" class="fw-semibold" aria-live="polite"></div>
-      <div id="chipsFiltros" class="d-flex flex-wrap gap-2"></div>
-    </div>
-
-    <!-- Heurística 9: Ayuda en manejo de errores y sin resultados -->
-    <div id="sinResultados" class="text-center d-none" role="status"></div>
-
-    <!-- Grilla de Productos -->
-    <div id="productos" class="row g-4"></div>
-
-    <div class="text-center my-4">
-      <button id="btnMas" type="button" class="btn btn-outline-primary d-none"></button>
     </div>
   </div>
 
@@ -1040,17 +1093,6 @@
         </div>`;
     }
 
-    // Banner que se intercala entre los resultados (cada 12 productos)
-    function bannerEntreResultados(n) {
-      const cat = $('filtroCategoria').value;
-      const candidatos = ANUNCIOS.banners.filter(b => b.categoria !== cat); // no anunciar la categoría que ya se está viendo
-      if (!candidatos.length) return '';
-      const b = candidatos[n % candidatos.length], { tema, boton } = bannerContenido(b);
-      return `<div class="col-12"><div class="ad-banner ad-banner-inline ad-${tema}">
-        <div><span class="ad-etiqueta">Anuncio</span><h3>${escapeHTML(b.titulo || '')}</h3><p>${escapeHTML(b.texto || '')}</p></div>
-        ${boton}
-      </div></div>`;
-    }
 
     const terminosActuales = () => norm($('buscador').value).split(/\s+/).filter(Boolean);
 
@@ -1072,7 +1114,7 @@
 
     function aplicarFiltros() {
       const terminos = terminosActuales(), cat = $('filtroCategoria').value, marca = $('filtroMarca').value, orden = $('ordenProductos').value;
-      const [min, max] = $('filtroPrecio').value ? $('filtroPrecio').value.split('-').map(Number) : [0, Infinity];
+      const [min, max] = precioActivo() ? [PRECIO.min, PRECIO.max] : [0, Infinity];
       resultados = PRODUCTOS.map(p => ({ p, s: terminos.length ? puntuar(p, terminos) : 0 }))
         .filter(({ p, s }) => s >= 0 && (!cat || p.c === cat) && (!marca || p.m === marca) && p.p >= min && p.p <= max)
         .sort((a, b) => orden === 'precio-asc' ? a.p.p - b.p.p : orden === 'precio-desc' ? b.p.p - a.p.p : orden === 'nombre' ? a.p.titulo.localeCompare(b.p.titulo, 'es') : (b.s - a.s) || (a.p.id - b.p.id))
@@ -1095,7 +1137,7 @@
       }).join(' ');
 
       const patrocinado = ANUNCIOS.productos.has(p.idDb);
-      return `<div class="col-6 col-md-4 col-lg-3 producto${patrocinado ? ' tarjeta-patrocinada' : ''}" data-categoria="${p.c}">
+      return `<div class="col-6 col-md-4 col-xxl-3 producto${patrocinado ? ' tarjeta-patrocinada' : ''}" data-categoria="${p.c}">
         <div class="card h-100 shadow-sm position-relative">
           ${patrocinado ? '<span class="badge-patrocinado">Patrocinado</span>' : ''}
           <img src="${p.img}" class="card-img-top" alt="${escapeHTML(p.titulo)}" loading="lazy">
@@ -1137,8 +1179,7 @@
       const patro = $('ordenProductos').value === 'relevancia' ? resultados.filter(p => ANUNCIOS.productos.has(p.idDb)).slice(0, 2) : [];
       const base = patro.length ? resultados.filter(p => !patro.includes(p)) : resultados;
       const mostrados = [...patro, ...base.slice(0, Math.max(0, pagina * POR_PAGINA - patro.length))];
-      $('productos').innerHTML = mostrados.map((p, i) =>
-        (i > 0 && i % 12 === 0 ? bannerEntreResultados(i / 12 - 1) : '') + tarjetaHTML(p, v, res)).join('');
+      $('productos').innerHTML = mostrados.map(p => tarjetaHTML(p, v, res)).join('');
       $('sinResultados').classList.toggle('d-none', total > 0);
       if (!total) mostrarSinResultados(terminos);
       $('btnMas').classList.toggle('d-none', mostrados.length >= total);
@@ -1162,7 +1203,9 @@
       if (q) f.push(['q', `Búsqueda: «${q}»`]);
       if ($('filtroCategoria').value) f.push(['cat', $('filtroCategoria').value]);
       if ($('filtroMarca').value) f.push(['marca', $('filtroMarca').value]);
-      if ($('filtroPrecio').value) f.push(['precio', $('filtroPrecio').selectedOptions[0].textContent]);
+      if (precioActivo()) f.push(['precio', `Precio: ${pesos(PRECIO.min)} – ${pesos(PRECIO.max)}`]);
+      const nFiltros = f.filter(([k]) => k !== 'q').length;
+      $('contadorFiltros').textContent = nFiltros; $('contadorFiltros').classList.toggle('d-none', !nFiltros);
       $('chipsFiltros').innerHTML = f.map(([k, t]) => `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" data-quitar="${k}">${escapeHTML(t)} ✕</button>`).join('');
     }
 
@@ -1170,8 +1213,68 @@
       if (k === 'q') $('buscador').value = '';
       if (k === 'cat') { $('filtroCategoria').value = ''; llenarMarcas(); }
       if (k === 'marca') $('filtroMarca').value = '';
-      if (k === 'precio') $('filtroPrecio').value = '';
+      if (k === 'precio') reiniciarPrecio();
       aplicarFiltros();
+    }
+
+    // ---- Rango de precio libre ----
+    // Límites calculados con los precios reales del catálogo (redondeados a $100).
+    const PRECIO = { piso: 0, techo: 0, min: 0, max: 0, paso: 100 };
+    const pesos = n => '$' + Number(n).toLocaleString('es-MX');
+    const precioActivo = () => PRECIO.techo > 0 && (PRECIO.min > PRECIO.piso || PRECIO.max < PRECIO.techo);
+    let temporizadorPrecio;
+
+    function iniciarPrecio() {
+      const precios = PRODUCTOS.map(p => p.p).filter(Number.isFinite);
+      PRECIO.piso = precios.length ? Math.floor(Math.min(...precios) / PRECIO.paso) * PRECIO.paso : 0;
+      PRECIO.techo = precios.length ? Math.ceil(Math.max(...precios) / PRECIO.paso) * PRECIO.paso : 0;
+      ['precioMinRange', 'precioMaxRange'].forEach(id => Object.assign($(id), { min: PRECIO.piso, max: PRECIO.techo, step: PRECIO.paso }));
+      ['precioMin', 'precioMax'].forEach(id => Object.assign($(id), { min: PRECIO.piso, max: PRECIO.techo, step: 1 }));
+      $('ayudaPrecio').textContent = `Precios del catálogo: ${pesos(PRECIO.piso)} a ${pesos(PRECIO.techo)}`;
+      reiniciarPrecio();
+    }
+
+    function reiniciarPrecio() { PRECIO.min = PRECIO.piso; PRECIO.max = PRECIO.techo; pintarPrecio(); }
+
+    // Refleja PRECIO en los dos deslizadores, los dos campos y la franja verde
+    function pintarPrecio() {
+      $('precioMinRange').value = PRECIO.min; $('precioMaxRange').value = PRECIO.max;
+      $('precioMin').value = PRECIO.min; $('precioMax').value = PRECIO.max;
+      const ancho = (PRECIO.techo - PRECIO.piso) || 1;
+      $('rangoRelleno').style.left = ((PRECIO.min - PRECIO.piso) / ancho * 100) + '%';
+      $('rangoRelleno').style.right = ((PRECIO.techo - PRECIO.max) / ancho * 100) + '%';
+      $('precioMinRange').setAttribute('aria-valuetext', pesos(PRECIO.min));
+      $('precioMaxRange').setAttribute('aria-valuetext', pesos(PRECIO.max));
+      // El deslizador mínimo queda encima cuando ambos están en el extremo derecho, para poder moverlo
+      $('precioMinRange').style.zIndex = PRECIO.min >= PRECIO.techo - PRECIO.paso ? 3 : 1;
+      $('precioMaxRange').style.zIndex = 2;
+    }
+
+    function fijarPrecio(min, max) {
+      min = Number.isFinite(min) ? min : PRECIO.piso; max = Number.isFinite(max) ? max : PRECIO.techo;
+      if (min > max) [min, max] = [max, min];                       // si escriben al revés, se invierten
+      PRECIO.min = Math.max(PRECIO.piso, Math.min(min, PRECIO.techo));
+      PRECIO.max = Math.min(PRECIO.techo, Math.max(max, PRECIO.piso));
+      pintarPrecio();
+      clearTimeout(temporizadorPrecio); temporizadorPrecio = setTimeout(aplicarFiltros, 150);
+    }
+
+    function enlazarPrecio() {
+      // Deslizadores: no se pueden cruzar
+      $('precioMinRange').addEventListener('input', e => fijarPrecio(Math.min(+e.target.value, PRECIO.max), PRECIO.max));
+      $('precioMaxRange').addEventListener('input', e => fijarPrecio(PRECIO.min, Math.max(+e.target.value, PRECIO.min)));
+      // Campos numéricos: se aplican al salir del campo o con Enter
+      const desdeCampos = () => fijarPrecio($('precioMin').value === '' ? NaN : +$('precioMin').value, $('precioMax').value === '' ? NaN : +$('precioMax').value);
+      ['precioMin', 'precioMax'].forEach(id => {
+        $(id).addEventListener('change', desdeCampos);
+        $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); desdeCampos(); } });
+      });
+    }
+
+    // Altura real de la barra de navegación, para que la columna de filtros quede justo debajo
+    function medirNavbar() {
+      const nav = document.querySelector('nav.navbar');
+      if (nav) document.documentElement.style.setProperty('--alto-nav', nav.offsetHeight + 'px');
     }
 
     function llenarCategorias() {
@@ -1187,7 +1290,7 @@
     }
 
     function limpiarCampos() {
-      $('buscador').value = ''; $('filtroCategoria').value = ''; $('filtroPrecio').value = ''; $('ordenProductos').value = 'relevancia'; llenarMarcas();
+      $('buscador').value = ''; $('filtroCategoria').value = ''; reiniciarPrecio(); $('ordenProductos').value = 'relevancia'; llenarMarcas();
     }
     function limpiarFiltros() { limpiarCampos(); aplicarFiltros(); }
 
@@ -1202,14 +1305,15 @@
     }
 
     function iniciarCatalogo() {
-      llenarCategorias(); llenarMarcas();
+      llenarCategorias(); llenarMarcas(); iniciarPrecio(); enlazarPrecio();
+      medirNavbar(); window.addEventListener('resize', medirNavbar);
       const buscador = $('buscador'); let temporizador;
       buscador.addEventListener('input', () => { clearTimeout(temporizador); mostrarSugerencias(); temporizador = setTimeout(aplicarFiltros, 200); });
       buscador.addEventListener('focus', mostrarSugerencias);
       $('formBusqueda').addEventListener('submit', e => { e.preventDefault(); cerrarSugerencias(); aplicarFiltros(); });
       $('btnLimpiarBusqueda').addEventListener('click', () => { buscador.value = ''; aplicarFiltros(); buscador.focus(); });
       $('filtroCategoria').addEventListener('change', () => { llenarMarcas(); aplicarFiltros(); });
-      ['filtroMarca', 'filtroPrecio', 'ordenProductos'].forEach(id => $(id).addEventListener('change', aplicarFiltros));
+      ['filtroMarca', 'ordenProductos'].forEach(id => $(id).addEventListener('change', aplicarFiltros));
       $('btnMas').addEventListener('click', () => { pagina++; renderizarResultados(); });
       document.addEventListener('mousedown', e => { if (!e.target.closest('#formBusqueda')) cerrarSugerencias(); });
       document.addEventListener('click', e => {
